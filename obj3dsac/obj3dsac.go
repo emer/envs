@@ -22,7 +22,12 @@ import (
 	"github.com/goki/mat32"
 )
 
-// Obj3DSac generates renderings of 3D objects with saccadic eye movements
+// Obj3DSac generates renderings of 3D objects with saccadic eye movements.
+// Object is moved around using Sac positions relative to 0,0,0 origin
+// and Camera is at 0,0,Z with rotations based on saccade movements.
+// Can save a table of saccade data plus image file names to use for
+// offline training of models on a cluster using this code, or
+// incorporate into an env for more dynamic uses.
 type Obj3DSac struct {
 	Objs       Obj3D           `desc:"list of 3D objects"`
 	Sac        Saccade         `desc:"saccade control"`
@@ -30,13 +35,17 @@ type Obj3DSac struct {
 	Sequential bool            `desc:"if true, present in sequential order -- else permuted"`
 	FOV        float32         `desc:"field of view for camera"`
 	ImgSize    image.Point     `desc:"size of image to render"`
-	ObjOff     mat32.Vec3      `desc:"initial offset for object position"`
-	ZOffScale  float32         `desc:"multiplies the z_offset from obj cat props table"`
+	ViewScale  int             `desc:"scale factor for viewing the image"`
+	CamPos     mat32.Vec3      `desc:"camera position -- object is positioned around 0,0,0"`
+	ZOffScale  float32         `desc:"multiplies the object XYtrg - XYsz to set Zoff to keep general size of objects about the same"`
+	ZOffXYtrg  float32         `desc:"target XYsz for z offset scaling"`
 	XYPosScale float32         `desc:"multiplier for X,Y positions from saccade"`
 	ObjIdx     int             `desc:"index in objs list of current object"`
 	Order      []int           `desc:"order to present items (permuted or sequential)"`
 	CurObj     string          `inactive:"+" desc:"current object to show"`
 	CurCat     string          `inactive:"+" desc:"current category to show"`
+	CurXYsz    float32         `inactive:"+" desc:"current object XY size"`
+	CurZoff    float32         `inactive:"+" desc:"current Z offset based on XYsz and ZOff*"`
 	Image      *gi.Bitmap      `view:"-" desc:"snapshot bitmap view"`
 	Scene      *gi3d.Scene     `view:"-" desc:"3D scene"`
 	Group      *gi3d.Group     `view:"-" desc:"group holding loaded object"`
@@ -54,25 +63,31 @@ func (ob *Obj3DSac) Defaults() {
 	ob.Train = true
 	ob.FOV = 50
 	ob.ImgSize = image.Point{128, 128}
-	ob.ObjOff.Z = -0.3
-	ob.ZOffScale = 0.01
-	ob.XYPosScale = 0.15
+	ob.ViewScale = 4
+	ob.CamPos.Z = 3 // set to have object take about 1/2 of width of display overall
+	ob.ZOffScale = 2
+	ob.ZOffXYtrg = 0.6
+	ob.XYPosScale = 1
 }
 
 func (ob *Obj3DSac) Config() {
 	ob.Sac.Init()
 	ob.Objs.Open()
-	ob.Scene = &gi3d.Scene{}
-	ob.Scene.InitName(ob.Scene, "scene")
-	ob.ConfigScene(ob.Scene)
 	ob.Init()
 }
 
+// ConfigScene must be called with pointer to Scene that is created
+// in some form in GUI -- Scene must have access to a Window
 func (ob *Obj3DSac) ConfigScene(sc *gi3d.Scene) {
+	ob.Scene = sc
+	sc.SetStretchMax()
+	sc.Defaults()
+	sc.BgColor.SetUInt8(103, 176, 255, 255) // sky blue
 	sc.Camera.FOV = ob.FOV
-	dir := gi3d.AddNewDirLight(sc, "dir", 1, gi3d.DirectSun)
-	dir.Pos.Set(0, 4, 1)                          // default: 0,1,1 = above and behind us (we are at 0,0,X)
+	sc.Camera.Pose.Pos = ob.CamPos
 	sc.Camera.LookAt(mat32.Vec3Zero, mat32.Vec3Y) // defaults to looking at origin
+	dir := gi3d.AddNewDirLight(sc, "dir", 1, gi3d.DirectSun)
+	dir.Pos.Set(0, 4, 1) // default: 0,1,1 = above and behind us (we are at 0,0,X)
 	ob.Group = gi3d.AddNewGroup(sc, sc, "obj-gp")
 }
 
@@ -106,7 +121,9 @@ func (ob *Obj3DSac) OpenObj(obj string) error {
 		log.Println(err)
 	}
 	sc.UpdateEnd(updt)
-	sc.Init3D()
+	sc.UpdateMeshBBox()
+	ob.CurXYsz = 0.5 * (ob.Group.MeshBBox.BBox.Max.X + ob.Group.MeshBBox.BBox.Max.Y)
+	ob.CurZoff = ob.ZOffScale * (ob.ZOffXYtrg - ob.CurXYsz)
 	return err
 }
 
@@ -125,6 +142,8 @@ func (ob *Obj3DSac) Render() error {
 		return err
 	}
 	(*frame).Rendered()
+	// ob.Scene.Render2D()
+	// ob.Scene.DirectWinUpload()
 
 	var img image.Image
 	oswin.TheApp.RunOnMain(func() {
@@ -132,20 +151,22 @@ func (ob *Obj3DSac) Render() error {
 		tex.SetBotZero(true)
 		img = tex.GrabImage()
 	})
-	ob.Image.SetImage(img, 0, 0)
+	vwsz := ob.ImgSize.Mul(ob.ViewScale)
+	ob.Image.SetImage(img, float32(vwsz.X), float32(vwsz.Y))
 	return nil
 }
 
 // Position puts object into position according to saccade table
 func (ob *Obj3DSac) Position() {
-	op := ob.ObjOff
+	op := mat32.Vec3{}
 	crows := ob.Objs.ObjCatProps.RowsByString("category", ob.CurCat, etable.Equals, etable.UseCase)
 	crow := crows[0]
-	zoff := float32(ob.Objs.ObjCatProps.CellFloat("z_offset", crow))
+	_ = crow
+	// zoff := float32(ob.Objs.ObjCatProps.CellFloat("z_offset", crow))
 	// ymirv := ob.Objs.ObjCatProps.CellFloat("y_rot_mirror", crow)
 	// ymir := ymirv != 0
-	op.Z += zoff * ob.ZOffScale
-	op.X -= ob.Sac.ObjPos.X * ob.XYPosScale
+	op.Z += ob.CurZoff
+	op.X += ob.Sac.ObjPos.X * ob.XYPosScale
 	op.Y += ob.Sac.ObjPos.Y * ob.XYPosScale
 	ob.Group.Pose.Pos = op
 }

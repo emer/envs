@@ -83,7 +83,7 @@ func (ss *Sim) ConfigGui() *gi.Window {
 	split.SetStretchMax()
 
 	sv := giv.AddNewStructView(split, "sv")
-	sv.SetStruct(ss)
+	sv.SetStruct(&ss.Objs)
 
 	tv := gi.AddNewTabView(split, "tv")
 

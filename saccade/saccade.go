@@ -6,6 +6,7 @@ package main
 
 import (
 	"fmt"
+	"log"
 	"math"
 	"math/rand"
 
@@ -87,7 +88,9 @@ func (sc *Saccade) Init() {
 	}
 	sc.Tick.Cur = -1 // will increment to 0
 	sc.NextTraj()    // start with a trajectory ready
+	sc.Tick.Scale = env.Tick
 	sc.Tick.Max = sc.TrajLen
+	sc.SacTick.Scale = env.Tick
 	sc.SacTick.Max = sc.FixDur
 	sc.SacTick.Cur = sc.SacTick.Max - 1 // ensure that we saccade next time
 }
@@ -118,7 +121,7 @@ func (sc *Saccade) WriteToTable(dt *etable.Table) {
 	}
 	dt.SetNumRows(row + 1)
 
-	nm := fmt.Sprintf("t %d, s %d, x %g, y %g", sc.Tick.Cur, sc.SacTick.Cur, sc.ObjPos.X, sc.ObjPos.Y)
+	nm := fmt.Sprintf("t %d, s %d, x %+4.2f, y %+4.2f", sc.Tick.Cur, sc.SacTick.Cur, sc.ObjPos.X, sc.ObjPos.Y)
 
 	dt.SetCellString("TrialName", row, nm)
 	dt.SetCellFloat("Tick", row, float64(sc.Tick.Cur))
@@ -127,12 +130,22 @@ func (sc *Saccade) WriteToTable(dt *etable.Table) {
 	sc.WorldTsr.SetZeros()
 	opx := int(math.Floor(float64(0.5 * (sc.ObjPos.X + 1) * float32(sc.WorldVisSz.X))))
 	opy := int(math.Floor(float64(0.5 * (sc.ObjPos.Y + 1) * float32(sc.WorldVisSz.Y))))
-	sc.WorldTsr.SetFloat([]int{opy, opx}, 1)
+	idx := []int{opy, opx}
+	if sc.WorldTsr.IdxIsValid(idx) {
+		sc.WorldTsr.SetFloat(idx, 1)
+	} else {
+		log.Printf("Saccade: World index invalid: %v\n", idx)
+	}
 
 	sc.ViewTsr.SetZeros()
 	opx = int(math.Floor(float64((0.5 * (sc.ObjViewPos.X + sc.ViewPct) / sc.ViewPct) * float32(sc.ViewVisSz.X))))
 	opy = int(math.Floor(float64((0.5 * (sc.ObjViewPos.Y + sc.ViewPct) / sc.ViewPct) * float32(sc.ViewVisSz.Y))))
-	sc.ViewTsr.SetFloat([]int{opy, opx}, 1)
+	idx = []int{opy, opx}
+	if sc.ViewTsr.IdxIsValid(idx) {
+		sc.ViewTsr.SetFloat(idx, 1)
+	} else {
+		log.Printf("Saccade: View index invalid: %v\n", idx)
+	}
 
 	dt.SetCellTensor("World", row, sc.WorldTsr)
 	dt.SetCellTensor("View", row, sc.ViewTsr)
@@ -219,8 +232,8 @@ func (sc *Saccade) NextTraj() {
 	if zeroVel {
 		sc.ObjVelNext.SetZero()
 	} else {
-		sc.ObjVelNext.X = rand.Float32() * sc.VelGenMax
-		sc.ObjVelNext.Y = rand.Float32() * sc.VelGenMax
+		sc.ObjVelNext.X = -sc.VelGenMax + 2*rand.Float32()*sc.VelGenMax
+		sc.ObjVelNext.Y = -sc.VelGenMax + 2*rand.Float32()*sc.VelGenMax
 		sc.ObjVelNext.X = sc.LimitVel(sc.ObjVelNext.X, sc.ObjPosNext.X, float32(sc.TrajLen))
 		sc.ObjVelNext.Y = sc.LimitVel(sc.ObjVelNext.Y, sc.ObjPosNext.Y, float32(sc.TrajLen))
 	}
@@ -263,6 +276,9 @@ func (sc *Saccade) Step() {
 	sc.NewTraj = sc.Tick.Incr()
 	sc.NewSac = sc.SacTick.Incr()
 
+	if sc.NewTrajNext {
+		sc.NewTrajNext = false
+	}
 	if sc.NewTraj {
 		sc.Tick.Max = sc.TrajLen // was computed last time
 		sc.ObjVel = sc.ObjVelNext

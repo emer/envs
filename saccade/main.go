@@ -79,7 +79,7 @@ func (ss *Sim) ConfigGui() *gi.Window {
 	split.SetStretchMax()
 
 	sv := giv.AddNewStructView(split, "sv")
-	sv.SetStruct(ss)
+	sv.SetStruct(&ss.Sac)
 
 	tv := gi.AddNewTabView(split, "tv")
 
@@ -94,7 +94,7 @@ func (ss *Sim) ConfigGui() *gi.Window {
 		vp.SetNeedsFullRender()
 	})
 
-	tbar.AddAction(gi.ActOpts{Label: "Step", Icon: "step", Tooltip: "Step env."}, win.This(), func(recv, send ki.Ki, sig int64, data interface{}) {
+	tbar.AddAction(gi.ActOpts{Label: "Step", Icon: "step-fwd", Tooltip: "Step env."}, win.This(), func(recv, send ki.Ki, sig int64, data interface{}) {
 		ss.Sac.Step()
 		ss.View.SetTable(ss.Sac.Table, nil)
 		vp.SetNeedsFullRender()

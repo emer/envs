@@ -9,6 +9,7 @@ import (
 	"github.com/emer/etable/etview"
 	_ "github.com/emer/etable/etview" // include to get gui views
 	"github.com/goki/gi/gi"
+	"github.com/goki/gi/gi3d"
 	"github.com/goki/gi/gimain"
 	"github.com/goki/gi/giv"
 	"github.com/goki/ki/ki"
@@ -16,13 +17,13 @@ import (
 )
 
 func main() {
-	TheSim.Config()
 	gimain.Main(func() { // this starts gui -- requires valid OpenGL display connection (e.g., X11)
 		guirun()
 	})
 }
 
 func guirun() {
+	TheSim.Config() // important to have this after gui init
 	win := TheSim.ConfigGui()
 	win.StartEventLoop()
 }
@@ -33,6 +34,7 @@ const LogPrec = 4
 // Sim holds the params, table, etc
 type Sim struct {
 	Obj       Obj3DSac          `desc:"the env item"`
+	StepN     int               `desc:"number of steps to take for StepN button"`
 	TableView *etview.TableView `view:"-" desc:"the main view"`
 	Win       *gi.Window        `view:"-" desc:"main GUI window"`
 	ToolBar   *gi.ToolBar       `view:"-" desc:"the master toolbar"`
@@ -43,6 +45,7 @@ var TheSim Sim
 
 // Config configures all the elements using the standard functions
 func (ss *Sim) Config() {
+	ss.StepN = 8
 	ss.Obj.Defaults()
 	ss.Obj.Config()
 	ss.Obj.Init()
@@ -78,9 +81,12 @@ func (ss *Sim) ConfigGui() *gi.Window {
 	split.SetStretchMax()
 
 	sv := giv.AddNewStructView(split, "sv")
-	sv.SetStruct(ss)
+	sv.SetStruct(&ss.Obj)
 
 	tv := gi.AddNewTabView(split, "tv")
+
+	sc := tv.AddNewTab(gi3d.KiT_Scene, "Scene").(*gi3d.Scene)
+	ss.Obj.ConfigScene(sc)
 
 	ss.Obj.Image = tv.AddNewTab(gi.KiT_Bitmap, "Image").(*gi.Bitmap)
 
@@ -95,9 +101,18 @@ func (ss *Sim) ConfigGui() *gi.Window {
 		vp.SetNeedsFullRender()
 	})
 
-	tbar.AddAction(gi.ActOpts{Label: "Step", Icon: "step", Tooltip: "Step env."}, win.This(), func(recv, send ki.Ki, sig int64, data interface{}) {
+	tbar.AddAction(gi.ActOpts{Label: "Step", Icon: "step-fwd", Tooltip: "Step env."}, win.This(), func(recv, send ki.Ki, sig int64, data interface{}) {
 		ss.Obj.Step()
 		ss.TableView.SetTable(ss.Obj.Sac.Table, nil)
+		vp.SetNeedsFullRender()
+	})
+
+	tbar.AddAction(gi.ActOpts{Label: "Step N", Icon: "forward", Tooltip: "Step env N steps."}, win.This(), func(recv, send ki.Ki, sig int64, data interface{}) {
+		for i := 0; i < ss.StepN; i++ {
+			ss.Obj.Step()
+			vp.FullRender2DTree()
+			ss.TableView.SetTable(ss.Obj.Sac.Table, nil)
+		}
 		vp.SetNeedsFullRender()
 	})
 
