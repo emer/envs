@@ -4,6 +4,8 @@ This repository contains various `emer.Env` environments for simulations, or ing
 
 Many examples are configured as a `main` package with a minimal GUI-based interactive testing program, so you can directly run and test the code without a full associated simulation.
 
+See also the `eve` package (`eve/examples`) for virtual reality 3D environments and `esg` for a random sentence generator.
+
 # Strategies
 
 ## Separate the "script" from the "production"

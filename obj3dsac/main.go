@@ -32,10 +32,10 @@ const LogPrec = 4
 
 // Sim holds the params, table, etc
 type Sim struct {
-	Sac     Saccade           `desc:"the env item"`
-	View    *etview.TableView `view:"-" desc:"the main view"`
-	Win     *gi.Window        `view:"-" desc:"main GUI window"`
-	ToolBar *gi.ToolBar       `view:"-" desc:"the master toolbar"`
+	Obj       Obj3DSac          `desc:"the env item"`
+	TableView *etview.TableView `view:"-" desc:"the main view"`
+	Win       *gi.Window        `view:"-" desc:"main GUI window"`
+	ToolBar   *gi.ToolBar       `view:"-" desc:"the master toolbar"`
 }
 
 // TheSim is the overall state for this simulation
@@ -43,10 +43,9 @@ var TheSim Sim
 
 // Config configures all the elements using the standard functions
 func (ss *Sim) Config() {
-	ss.Sac.Defaults()
-	// ss.Sac.AddRows = true
-	ss.Sac.Init()
-	ss.Sac.Step() // need one in there
+	ss.Obj.Defaults()
+	ss.Obj.Config()
+	ss.Obj.Init()
 }
 
 // Equation for biexponential synapse from here:
@@ -83,20 +82,22 @@ func (ss *Sim) ConfigGui() *gi.Window {
 
 	tv := gi.AddNewTabView(split, "tv")
 
-	ss.View = tv.AddNewTab(etview.KiT_TableView, "Table").(*etview.TableView)
-	ss.View.SetTable(ss.Sac.Table, nil)
+	ss.Obj.Image = tv.AddNewTab(gi.KiT_Bitmap, "Image").(*gi.Bitmap)
+
+	ss.TableView = tv.AddNewTab(etview.KiT_TableView, "Table").(*etview.TableView)
+	ss.TableView.SetTable(ss.Obj.Sac.Table, nil)
 
 	split.SetSplits(.2, .8)
 
 	tbar.AddAction(gi.ActOpts{Label: "Init", Icon: "reset", Tooltip: "Init env."}, win.This(), func(recv, send ki.Ki, sig int64, data interface{}) {
-		ss.Sac.Init()
-		ss.View.SetTable(ss.Sac.Table, nil)
+		ss.Obj.Init()
+		ss.TableView.SetTable(ss.Obj.Sac.Table, nil)
 		vp.SetNeedsFullRender()
 	})
 
 	tbar.AddAction(gi.ActOpts{Label: "Step", Icon: "step", Tooltip: "Step env."}, win.This(), func(recv, send ki.Ki, sig int64, data interface{}) {
-		ss.Sac.Step()
-		ss.View.SetTable(ss.Sac.Table, nil)
+		ss.Obj.Step()
+		ss.TableView.SetTable(ss.Obj.Sac.Table, nil)
 		vp.SetNeedsFullRender()
 	})
 
