@@ -61,10 +61,10 @@ func (ss *Sim) ConfigGui() *gi.Window {
 
 	// gi.WinEventTrace = true
 
-	gi.SetAppName("env")
+	gi.SetAppName("obj3dsac")
 	gi.SetAppAbout(`This tests and Env. See <a href="https://github.com/emer/emergent">emergent on GitHub</a>.</p>`)
 
-	win := gi.NewMainWindow("env", "Env Test", width, height)
+	win := gi.NewMainWindow("obj3dsac", "Obj3D Saccade", width, height)
 	ss.Win = win
 
 	vp := win.WinViewport2D()
@@ -88,31 +88,52 @@ func (ss *Sim) ConfigGui() *gi.Window {
 	sc := tv.AddNewTab(gi3d.KiT_Scene, "Scene").(*gi3d.Scene)
 	ss.Obj.ConfigScene(sc)
 
-	ss.Obj.Image = tv.AddNewTab(gi.KiT_Bitmap, "Image").(*gi.Bitmap)
+	ss.Obj.ViewImage = tv.AddNewTab(gi.KiT_Bitmap, "Image").(*gi.Bitmap)
+	ss.Obj.ViewImage.SetStretchMax()
 
 	ss.TableView = tv.AddNewTab(etview.KiT_TableView, "Table").(*etview.TableView)
 	ss.TableView.SetTable(ss.Obj.Sac.Table, nil)
 
-	split.SetSplits(.2, .8)
+	split.SetSplits(.3, .7)
 
-	tbar.AddAction(gi.ActOpts{Label: "Init", Icon: "reset", Tooltip: "Init env."}, win.This(), func(recv, send ki.Ki, sig int64, data interface{}) {
+	tbar.AddAction(gi.ActOpts{Label: "Init", Icon: "reset", Tooltip: "Init env.", UpdateFunc: func(act *gi.Action) {
+		act.SetActiveStateUpdt(!ss.Obj.IsRunning)
+	}}, win.This(), func(recv, send ki.Ki, sig int64, data interface{}) {
 		ss.Obj.Init()
 		ss.TableView.SetTable(ss.Obj.Sac.Table, nil)
 		vp.SetNeedsFullRender()
 	})
 
-	tbar.AddAction(gi.ActOpts{Label: "Step", Icon: "step-fwd", Tooltip: "Step env."}, win.This(), func(recv, send ki.Ki, sig int64, data interface{}) {
+	tbar.AddAction(gi.ActOpts{Label: "Step", Icon: "step-fwd", Tooltip: "Step env.", UpdateFunc: func(act *gi.Action) {
+		act.SetActiveStateUpdt(!ss.Obj.IsRunning)
+	}}, win.This(), func(recv, send ki.Ki, sig int64, data interface{}) {
 		ss.Obj.Step()
 		ss.TableView.SetTable(ss.Obj.Sac.Table, nil)
 		vp.SetNeedsFullRender()
 	})
 
-	tbar.AddAction(gi.ActOpts{Label: "Step N", Icon: "forward", Tooltip: "Step env N steps."}, win.This(), func(recv, send ki.Ki, sig int64, data interface{}) {
+	tbar.AddAction(gi.ActOpts{Label: "Step N", Icon: "forward", Tooltip: "Step env N steps.", UpdateFunc: func(act *gi.Action) {
+		act.SetActiveStateUpdt(!ss.Obj.IsRunning)
+	}}, win.This(), func(recv, send ki.Ki, sig int64, data interface{}) {
 		for i := 0; i < ss.StepN; i++ {
 			ss.Obj.Step()
 			vp.FullRender2DTree()
 			ss.TableView.SetTable(ss.Obj.Sac.Table, nil)
 		}
+		vp.SetNeedsFullRender()
+	})
+
+	tbar.AddAction(gi.ActOpts{Label: "Run", Icon: "play", Tooltip: "run full set of images and save to file.", UpdateFunc: func(act *gi.Action) {
+		act.SetActiveStateUpdt(!ss.Obj.IsRunning)
+	}}, win.This(), func(recv, send ki.Ki, sig int64, data interface{}) {
+		go ss.Obj.Run()
+		vp.SetNeedsFullRender()
+	})
+
+	tbar.AddAction(gi.ActOpts{Label: "Stop", Icon: "stop", Tooltip: "stop running generation.", UpdateFunc: func(act *gi.Action) {
+		act.SetActiveStateUpdt(ss.Obj.IsRunning)
+	}}, win.This(), func(recv, send ki.Ki, sig int64, data interface{}) {
+		ss.Obj.Stop()
 		vp.SetNeedsFullRender()
 	})
 
