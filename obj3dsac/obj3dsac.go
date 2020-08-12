@@ -34,6 +34,7 @@ import (
 type Obj3DSac struct {
 	Objs       Obj3D         `desc:"list of 3D objects"`
 	Sac        Saccade       `desc:"saccade control"`
+	Env        Obj3DSacEnv   `desc:"environment that loads rendered images"`
 	SaveFiles  bool          `desc:"if true, save images (in epoch-wise subdirs) and data.tsv file with saccade position data and image name, to images dir"`
 	NTrials    int           `desc:"number of trials per epoch, for saving"`
 	NEpcs      int           `desc:"number of epochs"`
@@ -94,6 +95,8 @@ func (ob *Obj3DSac) Defaults() {
 	ob.Rot3D.Set(0, 5, 0.5)
 	ob.Trial.Scale = env.Trial
 	ob.Epoch.Scale = env.Epoch
+
+	ob.Env.Defaults()
 }
 
 func (ob *Obj3DSac) Config() {

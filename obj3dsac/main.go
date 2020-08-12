@@ -123,6 +123,8 @@ func (ss *Sim) ConfigGui() *gi.Window {
 		vp.SetNeedsFullRender()
 	})
 
+	tbar.AddSeparator("run-sep")
+
 	tbar.AddAction(gi.ActOpts{Label: "Run", Icon: "play", Tooltip: "run full set of images and save to file.", UpdateFunc: func(act *gi.Action) {
 		act.SetActiveStateUpdt(!ss.Obj.IsRunning)
 	}}, win.This(), func(recv, send ki.Ki, sig int64, data interface{}) {
@@ -134,6 +136,22 @@ func (ss *Sim) ConfigGui() *gi.Window {
 		act.SetActiveStateUpdt(ss.Obj.IsRunning)
 	}}, win.This(), func(recv, send ki.Ki, sig int64, data interface{}) {
 		ss.Obj.Stop()
+		vp.SetNeedsFullRender()
+	})
+
+	tbar.AddSeparator("env-sep")
+
+	tbar.AddAction(gi.ActOpts{Label: "Env Init", Icon: "reset", Tooltip: "Init Env env.", UpdateFunc: func(act *gi.Action) {
+		act.SetActiveStateUpdt(!ss.Obj.IsRunning)
+	}}, win.This(), func(recv, send ki.Ki, sig int64, data interface{}) {
+		ss.Obj.Env.Init(0)
+		vp.SetNeedsFullRender()
+	})
+
+	tbar.AddAction(gi.ActOpts{Label: "Env Step", Icon: "step-fwd", Tooltip: "Step env.", UpdateFunc: func(act *gi.Action) {
+		act.SetActiveStateUpdt(!ss.Obj.IsRunning)
+	}}, win.This(), func(recv, send ki.Ki, sig int64, data interface{}) {
+		ss.Obj.Env.Step()
 		vp.SetNeedsFullRender()
 	})
 
