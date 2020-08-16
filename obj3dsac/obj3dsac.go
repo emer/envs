@@ -83,7 +83,7 @@ func (ob *Obj3DSac) Defaults() {
 	ob.Sac.Defaults()
 	ob.Sac.TrajLenRange.Set(8, 8)
 	ob.NTrials = 64
-	ob.NEpcs = 2
+	ob.NEpcs = 50 // todo: 1000 for full
 	ob.Train = true
 	ob.FOV = 50
 	ob.ImgSize = image.Point{256, 256}
@@ -118,7 +118,9 @@ func (ob *Obj3DSac) ConfigScene(sc *gi3d.Scene) {
 	sc.Camera.Pose.Pos = ob.CamPos
 	sc.Camera.LookAt(mat32.Vec3Zero, mat32.Vec3Y) // defaults to looking at origin
 	dir := gi3d.AddNewDirLight(sc, "dir", 1, gi3d.DirectSun)
-	dir.Pos.Set(0, 0, 1) // default: 0,1,1 = above and behind us (we are at 0,0,X)
+	dir.Pos.Set(0, 1, 1) // default: 0,1,1 = above and behind us (we are at 0,0,X)
+	// dir = gi3d.AddNewDirLight(sc, "dir2", 1, gi3d.DirectSun)
+	// dir.Pos.Set(0, 1, 0) // directly above
 	ob.Group = gi3d.AddNewGroup(sc, sc, "obj-gp")
 }
 
@@ -147,6 +149,7 @@ func (ob *Obj3DSac) OpenObj(obj string) error {
 	ob.Group.DeleteChildren(true)
 	sc.DeleteMeshes()
 	sc.DeleteTextures()
+	fmt.Printf("Epc: %d \t Trial: %d \t Opening object: %s\n", ob.Epoch.Cur, ob.Trial.Cur, fn)
 	_, err := sc.OpenNewObj(fn, ob.Group)
 	if err != nil {
 		log.Println(err)
@@ -175,19 +178,12 @@ func (ob *Obj3DSac) OpenObj(obj string) error {
 func (ob *Obj3DSac) Render() error {
 	frame := &ob.Frame
 	sc := ob.Scene
-	if !sc.ActivateOffFrame(frame, "objrend", ob.ImgSize, 4) { // 4 samples
-		err := fmt.Errorf("could not activate offscreen framebuffer")
-		log.Println(err)
+	err := sc.ActivateOffFrame(frame, "objrend", ob.ImgSize, 4)
+	if err != nil {
 		return err
 	}
-	if !sc.RenderOffFrame() {
-		err := fmt.Errorf("could not render to offscreen framebuffer")
-		log.Println(err)
-		return err
-	}
+	sc.RenderOffFrame()
 	(*frame).Rendered()
-	// ob.Scene.Render2D()
-	// ob.Scene.DirectWinUpload()
 
 	oswin.TheApp.RunOnMain(func() {
 		tex := (*frame).Texture()
@@ -252,7 +248,10 @@ func (ob *Obj3DSac) Step() {
 	}
 	ob.Position()
 	ob.Fixate()
-	ob.Render()
+	err := ob.Render()
+	if err != nil {
+		ob.Stop()
+	}
 	ob.SaveTick()
 }
 
@@ -291,7 +290,7 @@ func (ob *Obj3DSac) Run() {
 
 	for {
 		ob.Step()
-		vp.FullRender2DTree()
+		// vp.FullRender2DTree()
 		if ob.StopNow {
 			ob.StopNow = false
 			break

@@ -10,6 +10,7 @@ import (
 	"log"
 	"path/filepath"
 
+	"github.com/anthonynsimon/bild/transform"
 	"github.com/emer/emergent/env"
 	"github.com/emer/emergent/popcode"
 	"github.com/emer/etable/etable"
@@ -35,6 +36,8 @@ type Obj3DSacEnv struct {
 	Trial     env.Ctr         `view:"inline" desc:"each object trajectory is one trial"`
 	Tick      env.Ctr         `view:"inline" desc:"step along the trajectory"`
 	Row       env.Ctr         `view:"inline" desc:"row of table -- this is actual counter driving everything"`
+	CurCat    string          `desc:"current category"`
+	CurObj    string          `desc:"current object"`
 
 	// user can set the 2D shapes of these tensors -- Defaults sets default shapes
 	EyePos  etensor.Float32 `view:"eye position popcode"`
@@ -55,6 +58,7 @@ func (ev *Obj3DSacEnv) Validate() error {
 	if ev.Table.NumCols() == 0 {
 		return fmt.Errorf("env.Obj3DSacEnv: %v Table has no columns -- Outputs will be invalid", ev.Nm)
 	}
+	ev.DefaultIdxView()
 	return nil
 }
 
@@ -116,11 +120,21 @@ func (ev *Obj3DSacEnv) OpenTable() error {
 	return err
 }
 
-// CurRow returns current row in table, filtered through indexes
-func (ev *Obj3DSacEnv) CurRow() int {
+// DefaultIdxView ensures that there is an IdxView, creating a default if currently nil
+func (ev *Obj3DSacEnv) DefaultIdxView() {
 	if ev.IdxView == nil {
 		ev.IdxView = etable.NewIdxView(ev.Table)
 		ev.IdxView.Sequential()
+		ev.Row.Max = ev.IdxView.Len()
+	}
+}
+
+// CurRow returns current row in table, filtered through indexes
+func (ev *Obj3DSacEnv) CurRow() int {
+	ev.DefaultIdxView()
+	if ev.Row.Cur >= ev.IdxView.Len() {
+		ev.Row.Max = ev.IdxView.Len()
+		ev.Row.Cur = 0
 	}
 	return ev.IdxView.Idxs[ev.Row.Cur]
 }
@@ -143,6 +157,12 @@ func (ev *Obj3DSacEnv) FilterImage() error {
 	err := ev.OpenImage()
 	if err != nil {
 		return err
+	}
+	// resize once for both..
+	tsz := ev.V1Med.ImgSize
+	isz := ev.Image.Bounds().Size()
+	if isz != tsz {
+		ev.Image = transform.Resize(ev.Image, tsz.X, tsz.Y, transform.Linear)
 	}
 	ev.V1Med.Filter(ev.Image)
 	ev.V1Hi.Filter(ev.Image)
@@ -179,6 +199,13 @@ func (ev *Obj3DSacEnv) SetCtrs() {
 	ev.Trial.Set(trial)
 	tick := int(ev.Table.CellFloat("Tick", row))
 	ev.Tick.Set(tick)
+
+	ev.CurCat = ev.Table.CellString("Cat", row)
+	ev.CurObj = ev.Table.CellString("Obj", row)
+}
+
+func (ev *Obj3DSacEnv) String() string {
+	return fmt.Sprintf("%s:%s_%d", ev.CurCat, ev.CurObj, ev.Tick.Cur)
 }
 
 func (ev *Obj3DSacEnv) Step() bool {
@@ -218,9 +245,9 @@ func (ev *Obj3DSacEnv) State(element string) etensor.Tensor {
 		return &ev.Saccade
 	case "ObjVel":
 		return &ev.ObjVel
-	case "V1Med":
+	case "V1m":
 		return &ev.V1Med.V1AllTsr
-	case "V1Hi":
+	case "V1h":
 		return &ev.V1Hi.V1AllTsr
 	}
 	et, err := ev.IdxView.Table.CellTensorTry(element, ev.CurRow())

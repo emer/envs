@@ -8,5 +8,5 @@ package main
 
 var (
 	// ObjsBigSlow are particularly big and slow object files -- avoid if possible
-	ObjsBigSlow = []string{"drums", "tank"}
+	ObjsBigSlow = []string{"drums", "tank", "domestictree", "chandelier", "bicycle", "bow"}
 )
