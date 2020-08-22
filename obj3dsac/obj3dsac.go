@@ -22,6 +22,7 @@ import (
 	"github.com/goki/gi/gi3d"
 	"github.com/goki/gi/oswin"
 	"github.com/goki/gi/oswin/gpu"
+	"github.com/goki/ki/ki"
 	"github.com/goki/mat32"
 )
 
@@ -146,11 +147,13 @@ func (ob *Obj3DSac) OpenObj(obj string) error {
 	fn := filepath.Join(ob.Objs.Path, obj)
 	sc := ob.Scene
 	updt := sc.UpdateStart()
+	var err error
 	ob.Group.DeleteChildren(true)
 	sc.DeleteMeshes()
 	sc.DeleteTextures()
+	ki.DelMgr.DestroyDeleted() // this is actually essential to prevent leaking memory!
 	fmt.Printf("Epc: %d \t Trial: %d \t Opening object: %s\n", ob.Epoch.Cur, ob.Trial.Cur, fn)
-	_, err := sc.OpenNewObj(fn, ob.Group)
+	_, err = sc.OpenNewObj(fn, ob.Group)
 	if err != nil {
 		log.Println(err)
 	}
@@ -257,7 +260,6 @@ func (ob *Obj3DSac) Step() {
 
 // Run runs full set of Save trials / epochs
 func (ob *Obj3DSac) Run() {
-
 	ob.Trial.Max = ob.NTrials
 	ob.Epoch.Max = ob.NEpcs
 	ob.Trial.Init()
