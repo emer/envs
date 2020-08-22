@@ -53,9 +53,6 @@ func (ss *Sim) Config() {
 	ss.Objs.OpenCatProps("cu3d_obj_cat_props.csv")
 }
 
-// Equation for biexponential synapse from here:
-// https://brian2.readthedocs.io/en/stable/user/converting_from_integrated_form.html
-
 // ConfigGui configures the GoGi gui interface for this simulation,
 func (ss *Sim) ConfigGui() *gi.Window {
 	width := 1600
@@ -64,7 +61,7 @@ func (ss *Sim) ConfigGui() *gi.Window {
 	// gi.WinEventTrace = true
 
 	gi.SetAppName("env")
-	gi.SetAppAbout(`This tests and Env. See <a href="https://github.com/emer/emergent">emergent on GitHub</a>.</p>`)
+	gi.SetAppAbout(`This tests an Env. See <a href="https://github.com/emer/emergent">emergent on GitHub</a>.</p>`)
 
 	win := gi.NewMainWindow("env", "Env Test", width, height)
 	ss.Win = win

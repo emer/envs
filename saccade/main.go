@@ -49,9 +49,6 @@ func (ss *Sim) Config() {
 	ss.Sac.Step() // need one in there
 }
 
-// Equation for biexponential synapse from here:
-// https://brian2.readthedocs.io/en/stable/user/converting_from_integrated_form.html
-
 // ConfigGui configures the GoGi gui interface for this simulation,
 func (ss *Sim) ConfigGui() *gi.Window {
 	width := 1600
@@ -60,7 +57,7 @@ func (ss *Sim) ConfigGui() *gi.Window {
 	// gi.WinEventTrace = true
 
 	gi.SetAppName("env")
-	gi.SetAppAbout(`This tests and Env. See <a href="https://github.com/emer/emergent">emergent on GitHub</a>.</p>`)
+	gi.SetAppAbout(`This tests an Env. See <a href="https://github.com/emer/emergent">emergent on GitHub</a>.</p>`)
 
 	win := gi.NewMainWindow("env", "Env Test", width, height)
 	ss.Win = win
@@ -90,13 +87,13 @@ func (ss *Sim) ConfigGui() *gi.Window {
 
 	tbar.AddAction(gi.ActOpts{Label: "Init", Icon: "reset", Tooltip: "Init env."}, win.This(), func(recv, send ki.Ki, sig int64, data interface{}) {
 		ss.Sac.Init()
-		ss.View.SetTable(ss.Sac.Table, nil)
+		ss.View.UpdateTable()
 		vp.SetNeedsFullRender()
 	})
 
 	tbar.AddAction(gi.ActOpts{Label: "Step", Icon: "step-fwd", Tooltip: "Step env."}, win.This(), func(recv, send ki.Ki, sig int64, data interface{}) {
 		ss.Sac.Step()
-		ss.View.SetTable(ss.Sac.Table, nil)
+		ss.View.UpdateTable()
 		vp.SetNeedsFullRender()
 	})
 

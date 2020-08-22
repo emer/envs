@@ -36,7 +36,7 @@ type Saccade struct {
 	AddRows      bool       `desc:"add rows to Table for each step (for debugging) -- else re-use 0"`
 
 	// State below here
-	Table       *etable.Table    `inactive:"+" desc:"table showing visualization of state"`
+	Table       *etable.Table    `desc:"table showing visualization of state"`
 	WorldTsr    *etensor.Float32 `inactive:"+" desc:"tensor state showing world position of obj"`
 	ViewTsr     *etensor.Float32 `inactive:"+" desc:"tensor state showing view position of obj"`
 	TrajLen     int              `inactive:"+" desc:"current trajectory length"`
@@ -83,9 +83,8 @@ func (sc *Saccade) Init() {
 		yx := []string{"Y", "X"}
 		sc.WorldTsr = etensor.NewFloat32([]int{sc.WorldVisSz.Y, sc.WorldVisSz.X}, nil, yx)
 		sc.ViewTsr = etensor.NewFloat32([]int{sc.ViewVisSz.Y, sc.ViewVisSz.X}, nil, yx)
-	} else {
-		sc.Table.SetNumRows(0)
 	}
+	sc.Table.SetNumRows(1)
 	sc.Tick.Cur = -1 // will increment to 0
 	sc.NextTraj()    // start with a trajectory ready
 	sc.Tick.Scale = env.Tick
