@@ -84,7 +84,7 @@ func (ob *Obj3DSac) Defaults() {
 	ob.Sac.Defaults()
 	ob.Sac.TrajLenRange.Set(8, 8)
 	ob.NTrials = 64
-	ob.NEpcs = 50 // todo: 1000 for full
+	ob.NEpcs = 1000
 	ob.Train = true
 	ob.FOV = 50
 	ob.ImgSize = image.Point{256, 256}
@@ -103,8 +103,8 @@ func (ob *Obj3DSac) Defaults() {
 func (ob *Obj3DSac) Config() {
 	ob.Sac.Init()
 	ob.Objs.Open()
-	ob.Objs.DeleteCats(ObjsBigSlow) // avoid!
-	// ob.Objs.SelectCats() // todo: add sub-lists here
+	// ob.Objs.DeleteCats(ObjsBigSlow) // avoid!
+	ob.Objs.SelectCats(Objs20) // todo: add sub-lists here
 	ob.Init()
 }
 
