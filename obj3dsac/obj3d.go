@@ -5,7 +5,9 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"log"
 	"math/rand"
 	"path/filepath"
@@ -155,4 +157,52 @@ func (ob *Obj3D) FlatImpl(objs [][]string) []string {
 		}
 	}
 	return flat
+}
+
+// SaveObjsJSON saves object list to a JSON-formatted file.
+func SaveObjsJSON(objs [][]string, filename string) error {
+	b, err := json.MarshalIndent(objs, "", "  ")
+	if err != nil {
+		log.Println(err) // unlikely
+		return err
+	}
+	err = ioutil.WriteFile(string(filename), b, 0644)
+	if err != nil {
+		log.Println(err)
+	}
+	return err
+}
+
+// OpenObjsJSON opens object list from a JSON-formatted file.
+func OpenObjsJSON(objs *[][]string, filename string) error {
+	b, err := ioutil.ReadFile(string(filename))
+	if err != nil {
+		log.Println(err)
+		return err
+	}
+	return json.Unmarshal(b, objs)
+}
+
+// SaveListJSON saves flat string list to a JSON-formatted file.
+func SaveListJSON(list []string, filename string) error {
+	b, err := json.MarshalIndent(list, "", "  ")
+	if err != nil {
+		log.Println(err) // unlikely
+		return err
+	}
+	err = ioutil.WriteFile(string(filename), b, 0644)
+	if err != nil {
+		log.Println(err)
+	}
+	return err
+}
+
+// OpenListJSON opens flat string list from a JSON-formatted file.
+func OpenListJSON(list *[]string, filename string) error {
+	b, err := ioutil.ReadFile(string(filename))
+	if err != nil {
+		log.Println(err)
+		return err
+	}
+	return json.Unmarshal(b, list)
 }

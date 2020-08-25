@@ -285,6 +285,13 @@ func (ob *Obj3DSac) Run() {
 		return
 	}
 
+	if ob.Train {
+		SaveListJSON(ob.Objs.FlatTrain, filepath.Join(ob.SaveDir, "objs.json"))
+	} else {
+		SaveListJSON(ob.Objs.FlatTest, filepath.Join(ob.SaveDir, "objs.json"))
+	}
+	SaveListJSON(ob.Objs.Cats, filepath.Join(ob.SaveDir, "cats.json"))
+
 	ob.SaveFiles = true
 	ob.IsRunning = true
 
