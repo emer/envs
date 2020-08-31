@@ -9,6 +9,7 @@ import (
 	"log"
 	"math/rand"
 	"path/filepath"
+	"strings"
 
 	"github.com/emer/etable/etable"
 	"github.com/goki/gi/gi"
@@ -135,6 +136,52 @@ func (ob *Obj3D) DeleteCats(cats []string) {
 			ob.ObjFilesTest = append(ob.ObjFilesTest[:ci], ob.ObjFilesTest[ci+1:]...)
 		}
 	}
+	ob.Flats()
+}
+
+// SelectObjs filters the list of objs to those within given list of objects (contains)
+func (ob *Obj3D) SelectObjs(objs []string) {
+	for ci, _ := range ob.ObjFilesAll {
+		ofcat := ob.ObjFilesAll[ci]
+		no := len(ofcat)
+		for oi := no - 1; oi >= 0; oi-- {
+			ofl := ofcat[oi]
+			sel := false
+			for _, cs := range objs {
+				if strings.Contains(ofl, cs) {
+					sel = true
+					break
+				}
+			}
+			if !sel {
+				ofcat = append(ofcat[:oi], ofcat[oi+1:]...)
+			}
+		}
+	}
+	ob.Split()
+	ob.Flats()
+}
+
+// DeleteObjs filters the list of objs to exclude those within given list of objects (contains)
+func (ob *Obj3D) DeleteObjs(objs []string) {
+	for ci, _ := range ob.ObjFilesAll {
+		ofcat := ob.ObjFilesAll[ci]
+		no := len(ofcat)
+		for oi := no - 1; oi >= 0; oi-- {
+			ofl := ofcat[oi]
+			del := false
+			for _, cs := range objs {
+				if strings.Contains(ofl, cs) {
+					del = true
+					break
+				}
+			}
+			if del {
+				ofcat = append(ofcat[:oi], ofcat[oi+1:]...)
+			}
+		}
+	}
+	ob.Split()
 	ob.Flats()
 }
 

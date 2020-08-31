@@ -104,7 +104,8 @@ func (ob *Obj3DSac) Config() {
 	ob.Sac.Init()
 	ob.Objs.Open()
 	// ob.Objs.DeleteCats(ObjsBigSlow) // avoid!
-	ob.Objs.SelectCats(Objs20) // todo: add sub-lists here
+	ob.Objs.SelectCats(Objs20)
+	ob.Objs.SelectObjs(Objs20orig)
 	ob.Init()
 }
 

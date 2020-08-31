@@ -5,10 +5,8 @@
 package main
 
 import (
-	"encoding/json"
 	"fmt"
 	"image"
-	"io/ioutil"
 	"log"
 	"path/filepath"
 
@@ -269,4 +267,3 @@ func (ev *Obj3DSacEnv) Action(element string, input etensor.Tensor) {
 
 // Compile-time check that implements Env interface
 var _ env.Env = (*Obj3DSacEnv)(nil)
-
