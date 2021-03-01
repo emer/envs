@@ -13,9 +13,11 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"flag"
 
 	"github.com/emer/emergent/env"
 	"github.com/emer/emergent/erand"
+	"github.com/emer/emergent/popcode"
 	"github.com/emer/etable/etable"
 	"github.com/emer/etable/etensor"
 	"github.com/goki/gi/gi"
@@ -35,7 +37,12 @@ import (
 type Obj3DSac struct {
 	Objs       Obj3D         `desc:"list of 3D objects"`
 	Sac        Saccade       `desc:"saccade control"`
-	Env        Obj3DSacEnv   `desc:"environment that loads rendered images"`
+	// TODO first pass
+	// Env        Obj3DSacEnv   `desc:"environment that loads rendered images"`
+
+	RandomAction bool        `desc:"whether to interally generate random saccades or to use externally generated saccades as action inputs"`
+	Agent      BaseAgent    `view:"-" desc:"the agent generating actions"`
+	SacActionPop popcode.TwoD `desc:"popcode for decoding saccade actions"`
 	SaveFiles  bool          `desc:"if true, save images (in epoch-wise subdirs) and data.tsv file with saccade position data and image name, to images dir"`
 	NTrials    int           `desc:"number of trials per epoch, for saving"`
 	NEpcs      int           `desc:"number of epochs"`
@@ -49,17 +56,21 @@ type Obj3DSac struct {
 	ZOffScale  float32       `desc:"multiplies the object XYtrg - XYsz to set Zoff to keep general size of objects about the same"`
 	ZOffXYtrg  float32       `desc:"target XYsz for z offset scaling"`
 	XYPosScale float32       `desc:"multiplier for X,Y positions from saccade"`
-	Rot3D      mat32.Vec3    `desc:"how much to rotate along each axis, in degrees per step"`
-	ObjIdx     int           `desc:"index in objs list of current object"`
+	// TODO first pass
+	Rot3D      []mat32.Vec3  `desc:"how much to rotate along each axis, in degrees per step"`
+	ObjIdx     int           `desc:"index in objs list Order of first current object in order"`
 	Order      []int         `desc:"order to present items (permuted or sequential)"`
 
-	CurObj  string     `inactive:"+" desc:"current object to show"`
-	CurCat  string     `inactive:"+" desc:"current category to show"`
-	CurXYsz float32    `inactive:"+" desc:"current object XY size"`
-	CurZoff float32    `inactive:"+" desc:"current Z offset based on XYsz and ZOff*"`
-	InitRot mat32.Vec3 `inactive:"+" desc:"initial euler 3D rotation, in degrees"`
-	RotVel  mat32.Vec3 `inactive:"+" desc:"3D rotational velocity (degrees per step) for current object"`
-	CurRot  mat32.Vec3 `inactive:"+" desc:"current euler rotation"`
+	// TODO first pass
+	NObjScene int        `inactive:"+" desc:"number of objects to show simultaneously"`
+	CurObj  []string     `inactive:"+" desc:"current objects to show"`
+	CurCat  []string     `inactive:"+" desc:"current categories to show"`
+	CurXYsz []float32    `inactive:"+" desc:"current object XY sizes"`
+	CurZoff []float32    `inactive:"+" desc:"current Z offsets based on XYsz and ZOff*"`
+	InitRot []mat32.Vec3 `inactive:"+" desc:"initial euler 3D rotations, in degrees"`
+	RotVel  []mat32.Vec3 `inactive:"+" desc:"3D rotational velocities (degrees per step) for current objects"`
+	CurRot  []mat32.Vec3 `inactive:"+" desc:"current euler rotations"`
+
 	Trial   env.Ctr    `inactive:"+" desc:"current trial, for saving"`
 	Epoch   env.Ctr    `inactive:"+" desc:"current epoch, for saving"`
 	SaveDir string     `inactive:"+" desc:"name of current directory to save files into (images/train or images/test)"`
@@ -68,7 +79,9 @@ type Obj3DSac struct {
 	Image     image.Image     `view:"-" desc:"current rendered image in specified size"`
 	ViewImage *gi.Bitmap      `view:"-" desc:"View of image (scaled up) as a bitmap"`
 	Scene     *gi3d.Scene     `view:"-" desc:"3D scene"`
-	Group     *gi3d.Group     `view:"-" desc:"group holding loaded object"`
+
+	// TODO first pass
+	Group     []*gi3d.Group   `view:"-" desc:"group holding loaded objects"`
 	Frame     gpu.Framebuffer `view:"-" desc:"offscreen render buffer"`
 	File      *os.File        `view:"-" desc:"save file"`
 	StopNow   bool            `view:"-" desc:"flag to stop running"`
@@ -76,12 +89,16 @@ type Obj3DSac struct {
 }
 
 func (ob *Obj3DSac) Defaults() {
-	hdir, _ := os.UserHomeDir()
-	path := filepath.Join(hdir, "ccn_images/CU3D_100_plus_models_obj") // downloadable from TODO
-	ob.Objs.Path = path
+	// hdir, _ := os.UserHomeDir()
+	// path := filepath.Join(hdir, "ccn_images/CU3D_100_plus_models_obj") // downloadable from TODO
+	// ob.Objs.Path = path
 	ob.Objs.NTestPerCat = 2
-	ob.Objs.OpenCatProps("cu3d_obj_cat_props.csv")
+	// ob.Objs.OpenCatProps("cu3d_obj_cat_props.csv")
+	ob.CmdArgs()
+	fmt.Println(ob.RandomAction)
 	ob.Sac.Defaults()
+	ob.Sac.NObjScene = ob.NObjScene
+	ob.Sac.NObjSacLim = 1
 	ob.Sac.TrajLenRange.Set(8, 8)
 	ob.NTrials = 64
 	ob.NEpcs = 1000
@@ -93,17 +110,55 @@ func (ob *Obj3DSac) Defaults() {
 	ob.ZOffScale = 2
 	ob.ZOffXYtrg = 0.6
 	ob.XYPosScale = 1.5
-	ob.Rot3D.Set(0, 5, 0.5)
+	// TODO first pass
+	ob.Rot3D = make([]mat32.Vec3, ob.NObjScene)
+	ob.CurObj = make([]string, ob.NObjScene)
+	ob.CurCat = make([]string, ob.NObjScene)
+	ob.CurXYsz = make([]float32, ob.NObjScene)
+	ob.CurZoff = make([]float32, ob.NObjScene)
+	ob.InitRot = make([]mat32.Vec3, ob.NObjScene)
+	ob.RotVel = make([]mat32.Vec3, ob.NObjScene)
+	ob.CurRot = make([]mat32.Vec3, ob.NObjScene)
+	ob.Group = make([]*gi3d.Group, ob.NObjScene)
+
+	for i := 0; i < ob.NObjScene; i++ {
+		ob.Rot3D[i].Set(0, 5, 0.5)
+	}
+
+	if !ob.RandomAction {
+		ob.SacActionPop.Defaults()
+		ob.SacActionPop.Min.Set(-0.45, -0.45)
+		ob.SacActionPop.Max.Set(0.45, 0.45)
+		ob.Sac.RandomAction = false
+	}
+
 	ob.Trial.Scale = env.Trial
 	ob.Epoch.Scale = env.Epoch
 
-	ob.Env.Defaults()
+	// TODO removed
+	// ob.Env.Defaults()
+}
+
+func (ob *Obj3DSac) CmdArgs() {
+	hdir, _ := os.UserHomeDir()
+	path_default := filepath.Join(hdir, "ccn_images/CU3D_100_plus_models_obj")
+
+	flag.StringVar(&ob.Objs.Path, "obj_path", path_default, "Path to directory containing .obj files in subdirectories of categories")
+
+	var cat_path string
+	flag.StringVar(&cat_path, "obj_cat_csv_path", "cu3d_obj_cat_props.csv", "Path to CSV containing object categories with Z-offset and y-rotated/mirrored values")
+	flag.IntVar(&ob.NObjScene, "n_obj_scene", 1, "Number of objects to simultaneously include in the scene")
+
+	flag.BoolVar(&ob.RandomAction, "rand_act", false, "Whether to use random actions or an external policy to generate actions.")
+	flag.Parse()
+	ob.Objs.OpenCatProps(cat_path)
 }
 
 func (ob *Obj3DSac) Config() {
 	ob.Sac.Init()
 	ob.Objs.Open()
-	// ob.Objs.DeleteCats(ObjsBigSlow) // avoid!
+	// must uncomment for standard testing with CU100-3D data set
+	ob.Objs.DeleteCats(ObjsBigSlow) // avoid!
 	ob.Objs.SelectCats(Objs20)
 	ob.Objs.SelectObjs(Objs20orig)
 	ob.Init()
@@ -123,7 +178,9 @@ func (ob *Obj3DSac) ConfigScene(sc *gi3d.Scene) {
 	dir.Pos.Set(0, 1, 1) // default: 0,1,1 = above and behind us (we are at 0,0,X)
 	// dir = gi3d.AddNewDirLight(sc, "dir2", 1, gi3d.DirectSun)
 	// dir.Pos.Set(0, 1, 0) // directly above
-	ob.Group = gi3d.AddNewGroup(sc, sc, "obj-gp")
+	for i := 0; i < ob.NObjScene; i++ {
+		ob.Group[i] = gi3d.AddNewGroup(sc, sc, "obj-gp")
+	}
 }
 
 // ObjList returns the object list to use (Train or Test)
@@ -139,42 +196,61 @@ func (ob *Obj3DSac) ObjList() []string {
 func (ob *Obj3DSac) Init() {
 	ob.ObjIdx = -1
 	nobj := len(ob.ObjList())
+	// fmt.Println(ob.ObjList())
 	ob.Order = rand.Perm(nobj)
 	ob.Sac.Init()
 }
 
+// TODO first pass
+
 // OpenObj opens object from file path -- relative to Objs.Path
-func (ob *Obj3DSac) OpenObj(obj string) error {
-	fn := filepath.Join(ob.Objs.Path, obj)
+// func (ob *Obj3DSac) OpenObj(obj string) error {
+func (ob *Obj3DSac) OpenObj(objs []string) error {
+	// fn := filepath.Join(ob.Objs.Path, obj)
+	fns := make([]string, len(objs))
+	for i, obj := range objs {
+		fns[i] = filepath.Join(ob.Objs.Path, obj)
+	}
+
 	sc := ob.Scene
 	updt := sc.UpdateStart()
 	var err error
-	ob.Group.DeleteChildren(true)
+	for i := 0; i < ob.NObjScene; i++ {
+		ob.Group[i].DeleteChildren(true)
+	}
 	sc.DeleteMeshes()
 	sc.DeleteTextures()
 	ki.DelMgr.DestroyDeleted() // this is actually essential to prevent leaking memory!
-	fmt.Printf("Epc: %d \t Trial: %d \t Opening object: %s\n", ob.Epoch.Cur, ob.Trial.Cur, fn)
-	_, err = sc.OpenNewObj(fn, ob.Group)
-	if err != nil {
-		log.Println(err)
+	// fmt.Printf("Epc: %d \t Trial: %d \t Opening object: %s\n", ob.Epoch.Cur, ob.Trial.Cur, fn)
+	fmt.Printf("Epc: %d \t Trial: %d \t Opening object: %s\n", ob.Epoch.Cur, ob.Trial.Cur, fns)
+
+	for i, fn := range fns {
+		_, err = sc.OpenNewObj(fn, ob.Group[i])
+		if err != nil {
+			log.Println(err)
+		}
+
+		sc.UpdateEnd(updt)
+		sc.UpdateMeshBBox()
+		ob.CurXYsz[i] = 0.5 * (ob.Group[i].MeshBBox.BBox.Max.X + ob.Group[i].MeshBBox.BBox.Max.Y)
+		ob.CurZoff[i] = ob.ZOffScale * (ob.ZOffXYtrg - ob.CurXYsz[i])
+		crows := ob.Objs.ObjCatProps.RowsByString("category", ob.CurCat[i], etable.Equals, etable.UseCase)
+		crow := crows[0]
+		// zoff := float32(ob.Objs.ObjCatProps.CellFloat("z_offset", crow))
+		ymirv := ob.Objs.ObjCatProps.CellFloat("y_rot_mirror", crow)
+		ymir := ymirv != 0
+		yflip := erand.BoolProb(.5, -1)
+		if ymir && yflip {
+			ob.InitRot[i].Y = 180
+		} else {
+			ob.InitRot[i].Y = 0
+		}
+		ob.RotVel[i].Z = -ob.Rot3D[i].Z + 2*ob.Rot3D[i].Z*rand.Float32()
+		ob.RotVel[i].Y = -ob.Rot3D[i].Y + 2*ob.Rot3D[i].Y*rand.Float32()
+		if err != nil {
+			return err
+		}
 	}
-	sc.UpdateEnd(updt)
-	sc.UpdateMeshBBox()
-	ob.CurXYsz = 0.5 * (ob.Group.MeshBBox.BBox.Max.X + ob.Group.MeshBBox.BBox.Max.Y)
-	ob.CurZoff = ob.ZOffScale * (ob.ZOffXYtrg - ob.CurXYsz)
-	crows := ob.Objs.ObjCatProps.RowsByString("category", ob.CurCat, etable.Equals, etable.UseCase)
-	crow := crows[0]
-	// zoff := float32(ob.Objs.ObjCatProps.CellFloat("z_offset", crow))
-	ymirv := ob.Objs.ObjCatProps.CellFloat("y_rot_mirror", crow)
-	ymir := ymirv != 0
-	yflip := erand.BoolProb(.5, -1)
-	if ymir && yflip {
-		ob.InitRot.Y = 180
-	} else {
-		ob.InitRot.Y = 0
-	}
-	ob.RotVel.Z = -ob.Rot3D.Z + 2*ob.Rot3D.Z*rand.Float32()
-	ob.RotVel.Y = -ob.Rot3D.Y + 2*ob.Rot3D.Y*rand.Float32()
 	return err
 }
 
@@ -201,18 +277,21 @@ func (ob *Obj3DSac) Render() error {
 	return nil
 }
 
-// Position puts object into position according to saccade table
+// Position puts objects into position according to saccade table
+// TODO first pass
 func (ob *Obj3DSac) Position() {
-	op := mat32.Vec3{}
-	op.Z += ob.CurZoff
-	op.X += ob.Sac.ObjPos.X * ob.XYPosScale
-	op.Y += ob.Sac.ObjPos.Y * ob.XYPosScale
-	ob.Group.Pose.Pos = op
-	ob.CurRot = ob.InitRot.Add(ob.RotVel.MulScalar(float32(ob.Sac.Tick.Cur)))
-	ob.Group.Pose.SetEulerRotation(ob.CurRot.X, ob.CurRot.Y, ob.CurRot.Z)
+	for i := 0; i < ob.NObjScene; i++ {
+		op := mat32.Vec3{}
+		op.Z += ob.CurZoff[i]
+		op.X += ob.Sac.ObjPos[i].X * ob.XYPosScale
+		op.Y += ob.Sac.ObjPos[i].Y * ob.XYPosScale
+		ob.Group[i].Pose.Pos = op
+		ob.CurRot[i] = ob.InitRot[i].Add(ob.RotVel[i].MulScalar(float32(ob.Sac.Tick.Cur)))
+		ob.Group[i].Pose.SetEulerRotation(ob.CurRot[i].X, ob.CurRot[i].Y, ob.CurRot[i].Z)
+	}
 }
 
-// Fixate moves eyes to fixate on eye position
+// Fixate moves rendering camera to fixate on eye position
 func (ob *Obj3DSac) Fixate() {
 	sc := ob.Scene
 	trg := mat32.Vec3{}
@@ -223,30 +302,34 @@ func (ob *Obj3DSac) Fixate() {
 
 // SetObj sets the current obj info based on flat list of objects
 func (ob *Obj3DSac) SetObj(list []string) {
-	if ob.ObjIdx >= len(list) {
+	// TODO first pass
+	if ob.ObjIdx + ob.NObjScene - 1 >= len(list) {
 		ob.ObjIdx = 0
 		erand.PermuteInts(ob.Order)
 	}
-	idx := ob.ObjIdx
-	if !ob.Sequential {
-		idx = ob.Order[ob.ObjIdx]
+
+	for i := 0; i < ob.NObjScene; i++ {
+		idx := ob.ObjIdx + i
+		if !ob.Sequential {
+			idx = ob.Order[idx]
+		}
+		ob.CurObj[i] = list[idx]
+		ob.CurCat[i] = strings.Split(ob.CurObj[i], "/")[0]
 	}
-	ob.CurObj = list[idx]
-	ob.CurCat = strings.Split(ob.CurObj, "/")[0]
 	ob.OpenObj(ob.CurObj)
 }
 
 // Step iterates to next item
 func (ob *Obj3DSac) Step() {
 	ob.Sac.Step()
+	// TODO 
 	if ob.Sac.NewTraj || ob.ObjIdx < 0 {
-		ob.ObjIdx++
+		ob.ObjIdx += ob.NObjScene
 		ob.SetObj(ob.ObjList()) // wraps objidx
 		if ob.Trial.Incr() {
 			if ob.Epoch.Incr() {
 				ob.Stop()
 				return
-
 			}
 		}
 	}
@@ -257,6 +340,14 @@ func (ob *Obj3DSac) Step() {
 		ob.Stop()
 	}
 	ob.SaveTick()
+}
+
+func (ob *Obj3DSac) Action(action map[string]etensor.Tensor) {
+	a := mat32.Vec2{}
+	// TODO add error handling
+	a, _ = ob.SacActionPop.Decode(action["SacPlan"])
+	fmt.Println("decoded sac plan", a)
+	ob.Sac.CondSetSacPlan(a)
 }
 
 // Run runs full set of Save trials / epochs
@@ -280,6 +371,9 @@ func (ob *Obj3DSac) Run() {
 	var err error
 	os.MkdirAll(ob.SaveDir, 0755)
 
+	var action map[string]etensor.Tensor
+	var state map[string]etensor.Tensor
+
 	ob.File, err = os.Create(filepath.Join(ob.SaveDir, "data.tsv"))
 	if err != nil {
 		log.Println(err)
@@ -299,8 +393,14 @@ func (ob *Obj3DSac) Run() {
 	vp := ob.Scene.Win.WinViewport2D()
 
 	for {
-		ob.Step()
-		// vp.FullRender2DTree()
+		if !ob.RandomAction {
+			action = ob.Agent.Step(state)  // TODO implement ob.State() to give state tensor as desired for an agent
+			ob.Action(action)
+			ob.Step()
+		} else {
+			ob.Step()
+		}
+		vp.FullRender2DTree()  // useful for debugging
 		if ob.StopNow {
 			ob.StopNow = false
 			break
@@ -319,21 +419,22 @@ func (ob *Obj3DSac) ConfigTable(dt *etable.Table) {
 	dt.SetMetaData("name", "Obj3DSacTable")
 	dt.SetMetaData("desc", "table of obj3d data")
 	dt.SetMetaData("read-only", "true")
-	dt.SetMetaData("precision", strconv.Itoa(LogPrec))
+		dt.SetMetaData("precision", strconv.Itoa(LogPrec))
 
+	// TODO first pass, not sure if etensor.STRING types can have cell shapes that aren't nil
 	sch := etable.Schema{
 		{"Epoch", etensor.INT64, nil, nil},
 		{"Trial", etensor.INT64, nil, nil},
 		{"Tick", etensor.INT64, nil, nil},
 		{"SacTick", etensor.INT64, nil, nil},
-		{"Cat", etensor.STRING, nil, nil},
-		{"Obj", etensor.STRING, nil, nil},
+		{"Cat", etensor.STRING, []int{ob.NObjScene}, nil},
+		{"Obj", etensor.STRING, []int{ob.NObjScene}, nil},
 		{"ImgFile", etensor.STRING, nil, nil},
-		{"ObjPos", etensor.FLOAT32, []int{2}, nil},
-		{"ObjViewPos", etensor.FLOAT32, []int{2}, nil},
-		{"ObjVel", etensor.FLOAT32, []int{2}, nil},
-		{"ObjPosNext", etensor.FLOAT32, []int{2}, nil},
-		{"ObjRot", etensor.FLOAT32, []int{3}, nil},
+		{"ObjPos", etensor.FLOAT32, []int{ob.NObjScene, 2}, nil},
+		{"ObjViewPos", etensor.FLOAT32, []int{ob.NObjScene, 2}, nil},
+		{"ObjVel", etensor.FLOAT32, []int{ob.NObjScene, 2}, nil},
+		{"ObjPosNext", etensor.FLOAT32, []int{ob.NObjScene, 2}, nil},
+		{"ObjRot", etensor.FLOAT32, []int{ob.NObjScene, 3}, nil},
 		{"EyePos", etensor.FLOAT32, []int{2}, nil},
 		{"SacPlan", etensor.FLOAT32, []int{2}, nil},
 		{"Saccade", etensor.FLOAT32, []int{2}, nil},
@@ -352,7 +453,10 @@ func (ob *Obj3DSac) SaveTick() {
 	trl := ob.Trial.Cur
 	tick := sc.Tick.Cur
 
-	obj := strings.Split(ob.CurObj, "/")[1]
+	objs := make([]string, ob.NObjScene)
+	for i := range ob.CurObj {
+		objs[i] = strings.Split(ob.CurObj[i], "/")[1]
+	}
 
 	epcdir := fmt.Sprintf("epc_%04d", epc)
 	imgdir := filepath.Join(ob.SaveDir, epcdir)
@@ -369,29 +473,56 @@ func (ob *Obj3DSac) SaveTick() {
 	dt.SetCellFloat("Trial", row, float64(trl))
 	dt.SetCellFloat("Tick", row, float64(tick))
 	dt.SetCellFloat("SacTick", row, float64(sc.SacTick.Cur))
-	dt.SetCellString("Cat", row, ob.CurCat)
-	dt.SetCellString("Obj", row, obj)
+
+	// TODO first pass
+	cat_col := dt.ColByName("Cat") 
+	obj_col := dt.ColByName("Obj") 
+
 	dt.SetCellString("ImgFile", row, ob.ImgFile)
 
 	// this is from saccade.go:
-	dt.SetCellTensorFloat1D("ObjPos", row, 0, float64(sc.ObjPos.X))
-	dt.SetCellTensorFloat1D("ObjPos", row, 1, float64(sc.ObjPos.Y))
-	dt.SetCellTensorFloat1D("ObjViewPos", row, 0, float64(sc.ObjViewPos.X))
-	dt.SetCellTensorFloat1D("ObjViewPos", row, 1, float64(sc.ObjViewPos.Y))
-	dt.SetCellTensorFloat1D("ObjVel", row, 0, float64(sc.ObjVel.X))
-	dt.SetCellTensorFloat1D("ObjVel", row, 1, float64(sc.ObjVel.Y))
-	dt.SetCellTensorFloat1D("ObjPosNext", row, 0, float64(sc.ObjPosNext.X))
-	dt.SetCellTensorFloat1D("ObjPosNext", row, 1, float64(sc.ObjPosNext.Y))
+	posTsr := etensor.NewFloat64([]int{sc.NObjScene, 2}, nil, nil)
+	viewPosTsr := etensor.NewFloat64([]int{sc.NObjScene, 2}, nil, nil)
+	velTsr := etensor.NewFloat64([]int{sc.NObjScene, 2}, nil, nil)
+	posNextTsr := etensor.NewFloat64([]int{sc.NObjScene, 2}, nil, nil)
+	rotTsr := etensor.NewFloat64([]int{sc.NObjScene, 3}, nil, nil)
+
+	fmt.Println(ob.Sac.ObjPos)
+	fmt.Println(ob.Sac.ObjVel)
+
+	for i := 0; i < sc.NObjScene; i++ {
+		cat_col.SetString([]int{row, i}, ob.CurCat[i])
+		obj_col.SetString([]int{row, i}, objs[i])
+
+		posTsr.SetFloat([]int{i, 0}, float64(sc.ObjPos[i].X))
+		posTsr.SetFloat([]int{i, 1}, float64(sc.ObjPos[i].Y))
+
+		viewPosTsr.SetFloat([]int{i, 0}, float64(sc.ObjViewPos[i].X))
+		viewPosTsr.SetFloat([]int{i, 1}, float64(sc.ObjViewPos[i].Y))
+
+		velTsr.SetFloat([]int{i, 0}, float64(sc.ObjVel[i].X))
+		velTsr.SetFloat([]int{i, 1}, float64(sc.ObjVel[i].Y))
+
+		posNextTsr.SetFloat([]int{i, 0}, float64(sc.ObjPosNext[i].X))
+		posNextTsr.SetFloat([]int{i, 1}, float64(sc.ObjPosNext[i].Y))
+
+		rotTsr.SetFloat([]int{i, 0}, float64(ob.CurRot[i].X))
+		rotTsr.SetFloat([]int{i, 1}, float64(ob.CurRot[i].Y))
+		rotTsr.SetFloat([]int{i, 2}, float64(ob.CurRot[i].Z))
+	}
+
+	dt.SetCellTensor("ObjPos", row, posTsr)
+	dt.SetCellTensor("ObjViewPos", row, viewPosTsr)
+	dt.SetCellTensor("ObjVel", row, velTsr)
+	dt.SetCellTensor("ObjPosNext", row, posNextTsr)
+	dt.SetCellTensor("ObjRot", row, rotTsr)
+
 	dt.SetCellTensorFloat1D("EyePos", row, 0, float64(sc.EyePos.X))
 	dt.SetCellTensorFloat1D("EyePos", row, 1, float64(sc.EyePos.Y))
 	dt.SetCellTensorFloat1D("SacPlan", row, 0, float64(sc.SacPlan.X))
 	dt.SetCellTensorFloat1D("SacPlan", row, 1, float64(sc.SacPlan.Y))
 	dt.SetCellTensorFloat1D("Saccade", row, 0, float64(sc.Saccade.X))
 	dt.SetCellTensorFloat1D("Saccade", row, 1, float64(sc.Saccade.Y))
-
-	dt.SetCellTensorFloat1D("ObjRot", row, 0, float64(ob.CurRot.X))
-	dt.SetCellTensorFloat1D("ObjRot", row, 1, float64(ob.CurRot.Y))
-	dt.SetCellTensorFloat1D("ObjRot", row, 2, float64(ob.CurRot.Z))
 
 	if ob.File != nil {
 		if trl == 0 && epc == 0 && tick == 0 {

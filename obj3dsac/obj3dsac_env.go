@@ -9,6 +9,7 @@ import (
 	"image"
 	"log"
 	"path/filepath"
+	"flag"
 
 	"github.com/anthonynsimon/bild/transform"
 	"github.com/emer/emergent/env"
@@ -23,28 +24,41 @@ import (
 type Obj3DSacEnv struct {
 	Nm        string          `desc:"name of this environment"`
 	Dsc       string          `desc:"description of this environment"`
+	Passive   bool            `desc:"whether to load passively generated env trajectories (with random saccade plans) or else use an active agent taking actions`
+	Ob        Obj3DSac        `desc:"Underlying structure implementing environment"`
 	Path      string          `desc:"path to data.tsv file as rendered, e.g., images/train"`
 	Table     *etable.Table   `desc:"loaded table of generated trial / tick data"`
 	IdxView   *etable.IdxView `desc:"indexed view of the table -- so you can do some additional filtering as needed -- sequential view created automatically if not otherwise set"`
 	EyePop    popcode.TwoD    `desc:"2d population code for gaussian bump rendering of eye position"`
 	SacPop    popcode.TwoD    `desc:"2d population code for gaussian bump rendering of saccade plan / execution"`
+
+	// TODO all objects should be encoded in a single bump? depends on how low of a level we want to go? are representations of object motions represented in isolation?
 	ObjVelPop popcode.TwoD    `desc:"2d population code for gaussian bump rendering of object velocity"`
 	V1Med     Vis             `desc:"v1 medium resolution filtering of image -- V1AllTsr has result"`
 	V1Hi      Vis             `desc:"v1 higher resolution filtering of image -- V1AllTsr has result"`
+
+	// for passive loading of pre-generated trajectories
 	Objs      []string        `desc:"list of objects, as cat/objfile"`
 	Cats      []string        `desc:"list of categories"`
 	Run       env.Ctr         `view:"inline" desc:"current run of model as provided during Init"`
 	Epoch     env.Ctr         `view:"inline" desc:"arbitrary aggregation of trials, for stats etc"`
 	Trial     env.Ctr         `view:"inline" desc:"each object trajectory is one trial"`
 	Tick      env.Ctr         `view:"inline" desc:"step along the trajectory"`
-	Row       env.Ctr         `view:"inline" desc:"row of table -- this is actual counter driving everything"`
-	CurCat    string          `desc:"current category"`
-	CurObj    string          `desc:"current object"`
+	Row       env.Ctr         `view:"inline" desc:"row of table -- this is actual counter driving everything if passive random actions are taken"`
+
+	// for active MDP trajectories
+	// ob        Obj3DSac
+
+	// TODO first pass
+	NObjScene int               `desc:"number of objects simultaneously in a scene"`
+	CurCat    []string          `desc:"current categories"`
+	CurObj    []string          `desc:"current objects"`
 
 	// user can set the 2D shapes of these tensors -- Defaults sets default shapes
 	EyePos  etensor.Float32 `view:"eye position popcode"`
 	SacPlan etensor.Float32 `view:"saccade plan popcode"`
 	Saccade etensor.Float32 `view:"saccade popcode "`
+	// TODO may be unnecessary? what exactly is this used for?
 	ObjVel  etensor.Float32 `view:"object velocity"`
 
 	Image image.Image `view:"-" desc:"rendered image as loaded"`
@@ -65,6 +79,13 @@ func (ev *Obj3DSacEnv) Validate() error {
 }
 
 func (ev *Obj3DSacEnv) Defaults() {
+	ev.CmdArgs()
+	if !ev.Passive {
+		ev.Ob.Defaults()
+		ev.Ob.Config()
+		ev.Ob.Init()
+	}
+
 	ev.Path = "images/train"
 
 	ev.EyePop.Defaults()
@@ -81,6 +102,7 @@ func (ev *Obj3DSacEnv) Defaults() {
 	ev.SacPlan.SetShape([]int{11, 11}, nil, nil)
 	ev.Saccade.SetShape([]int{11, 11}, nil, nil)
 
+	// TODO encode in a single bump for now
 	ev.ObjVelPop.Defaults()
 	ev.ObjVelPop.Min.Set(-0.45, -0.45)
 	ev.ObjVelPop.Max.Set(0.45, 0.45)
@@ -89,7 +111,10 @@ func (ev *Obj3DSacEnv) Defaults() {
 
 	ev.V1Med.Defaults(24, 8)
 	ev.V1Hi.Defaults(12, 4)
+}
 
+func (ev *Obj3DSacEnv) CmdArgs() {
+	flag.BoolVar(&ev.Passive, "passive", false, "Whether to use pre-generated env trajectories")
 }
 
 func (ev *Obj3DSacEnv) Init(run int) {
@@ -173,25 +198,47 @@ func (ev *Obj3DSacEnv) FilterImage() error {
 	return nil
 }
 
-// EncodePops encodes population codes from current row data
+// EncodePops encodes population codes
 func (ev *Obj3DSacEnv) EncodePops() {
-	row := ev.CurRow()
-	val := mat32.Vec2{}
-	val.X = float32(ev.Table.CellTensorFloat1D("EyePos", row, 0))
-	val.Y = float32(ev.Table.CellTensorFloat1D("EyePos", row, 1))
-	ev.EyePop.Encode(&ev.EyePos, val, popcode.Set)
+	if ev.Passive {
+		row := ev.CurRow()
+		val := mat32.Vec2{}
+		val.X = float32(ev.Table.CellTensorFloat1D("EyePos", row, 0))
+		val.Y = float32(ev.Table.CellTensorFloat1D("EyePos", row, 1))
+		ev.EyePop.Encode(&ev.EyePos, val, popcode.Set)
 
-	val.X = float32(ev.Table.CellTensorFloat1D("SacPlan", row, 0))
-	val.Y = float32(ev.Table.CellTensorFloat1D("SacPlan", row, 1))
-	ev.SacPop.Encode(&ev.SacPlan, val, popcode.Set)
+		// TODO redundant in the case of external actions giving saccade plans, although would need to input saccade plan directly to env in that case?
+		val.X = float32(ev.Table.CellTensorFloat1D("SacPlan", row, 0))
+		val.Y = float32(ev.Table.CellTensorFloat1D("SacPlan", row, 1))
+		ev.SacPop.Encode(&ev.SacPlan, val, popcode.Set)
 
-	val.X = float32(ev.Table.CellTensorFloat1D("Saccade", row, 0))
-	val.Y = float32(ev.Table.CellTensorFloat1D("Saccade", row, 1))
-	ev.SacPop.Encode(&ev.Saccade, val, popcode.Set)
+		val.X = float32(ev.Table.CellTensorFloat1D("Saccade", row, 0))
+		val.Y = float32(ev.Table.CellTensorFloat1D("Saccade", row, 1))
+		ev.SacPop.Encode(&ev.Saccade, val, popcode.Set)
 
-	val.X = float32(ev.Table.CellTensorFloat1D("ObjVel", row, 0))
-	val.Y = float32(ev.Table.CellTensorFloat1D("ObjVel", row, 1))
-	ev.ObjVelPop.Encode(&ev.ObjVel, val, popcode.Set)
+		// TODO first pass
+		velTsr := ev.Table.CellTensor("ObjVel", row)
+		val.X = float32(velTsr.FloatVal([]int{0, 0}))
+		val.Y = float32(velTsr.FloatVal([]int{0, 1}))
+		ev.ObjVelPop.Encode(&ev.ObjVel, val, popcode.Set)
+		for i := 1; i < ev.NObjScene; i++ {
+			val.X = float32(velTsr.FloatVal([]int{i, 0}))
+			val.Y = float32(velTsr.FloatVal([]int{i, 1}))
+			ev.ObjVelPop.Encode(&ev.ObjVel, val, popcode.Add)
+		}
+	} else {
+		ev.EyePop.Encode(&ev.EyePos, ev.Ob.Sac.EyePos, popcode.Set)
+
+		// TODO when do we set the saccade plan in Saccade?
+		ev.SacPop.Encode(&ev.SacPlan, ev.Ob.Sac.SacPlan, popcode.Set)
+
+		ev.SacPop.Encode(&ev.Saccade, ev.Ob.Sac.Saccade, popcode.Set)
+
+		ev.ObjVelPop.Encode(&ev.ObjVel, ev.Ob.Sac.ObjVel[0], popcode.Set)
+		for i := 1; i < ev.NObjScene; i++ {
+			ev.ObjVelPop.Encode(&ev.ObjVel, ev.Ob.Sac.ObjVel[i], popcode.Add)
+		}
+	}
 }
 
 // SetCtrs sets ctrs from current row data
@@ -204,19 +251,42 @@ func (ev *Obj3DSacEnv) SetCtrs() {
 	tick := int(ev.Table.CellFloat("Tick", row))
 	ev.Tick.Set(tick)
 
-	ev.CurCat = ev.Table.CellString("Cat", row)
-	ev.CurObj = ev.Table.CellString("Obj", row)
+	// TODO how are orders of categories and objects preserved from image generation process?
+	for i := 0; i < ev.NObjScene; i++ {
+		ev.CurCat[i] = ev.Table.CellString("Cat", row + i)
+		ev.CurObj[i] = ev.Table.CellString("Obj", row + i)
+	}
 }
 
 func (ev *Obj3DSacEnv) String() string {
+	// TODO
 	return fmt.Sprintf("%s:%s_%d", ev.CurCat, ev.CurObj, ev.Tick.Cur)
+}
+
+func (ev *Obj3DSacEnv) StepAction(action map[string]etensor.Tensor) bool {
+	ev.Epoch.Same() // good idea to just reset all non-inner-most counters at start
+	ev.Trial.Same()
+
+	ev.Ob.Action(action)
+	ev.Ob.Step()
+
+	ev.SetCtrs()
+	ev.EncodePops()
+	ev.FilterImage()
+
+	return true
 }
 
 func (ev *Obj3DSacEnv) Step() bool {
 	ev.Epoch.Same() // good idea to just reset all non-inner-most counters at start
 	ev.Trial.Same()
 
-	ev.Row.Incr() // auto-rotates
+	// TODO a little weird to encode different objects as alternating rows in Table rather than encoding each row with a struct containing info for all objects for a single step
+	for i := 0; i < ev.NObjScene; i++ {
+		ev.Row.Incr() // auto-rotates
+
+		// ev.Action()
+	}
 
 	ev.SetCtrs()
 	ev.EncodePops()
@@ -248,21 +318,31 @@ func (ev *Obj3DSacEnv) State(element string) etensor.Tensor {
 	case "Saccade":
 		return &ev.Saccade
 	case "ObjVel":
+		// TODO first pass
 		return &ev.ObjVel
 	case "V1m":
 		return &ev.V1Med.V1AllTsr
 	case "V1h":
 		return &ev.V1Hi.V1AllTsr
 	}
-	et, err := ev.IdxView.Table.CellTensorTry(element, ev.CurRow())
-	if err != nil {
-		log.Println(err)
+	if ev.Passive {
+		et, err := ev.IdxView.Table.CellTensorTry(element, ev.CurRow())
+		if err != nil {
+			log.Println(err)
+		}
+		return et
 	}
-	return et
+	return nil
 }
 
 func (ev *Obj3DSacEnv) Action(element string, input etensor.Tensor) {
-	// nop
+	if element == "SacPlan" {
+		a := map[string]etensor.Tensor{"SacPlan": input}
+		ev.Ob.Action(a)
+	} else {
+		// TODO
+		// raise error
+	}
 }
 
 // Compile-time check that implements Env interface
