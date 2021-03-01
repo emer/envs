@@ -247,8 +247,8 @@ func (sc *Saccade) NextTraj() {
 // NextSaccade generates next saccade plan
 func (sc *Saccade) NextSaccade() {
 	sc.FixDur = sc.FixDurRange.Min + rand.Intn(sc.FixDurRange.Range()+1)
-	sc.SacPlan.X = rand.Float32() * sc.SacGenMax
-	sc.SacPlan.Y = rand.Float32() * sc.SacGenMax
+	sc.SacPlan.X = -sc.SacGenMax + 2*rand.Float32()*sc.SacGenMax
+	sc.SacPlan.Y = -sc.SacGenMax + 2*rand.Float32()*sc.SacGenMax
 	sc.SacPlan.X = sc.LimitSac(sc.SacPlan.X, sc.EyePos.X, sc.ObjPosNext.X, sc.ObjVelNext.X, float32(sc.FixDur))
 	sc.SacPlan.Y = sc.LimitSac(sc.SacPlan.Y, sc.EyePos.Y, sc.ObjPosNext.Y, sc.ObjVelNext.Y, float32(sc.FixDur))
 }
@@ -308,3 +308,4 @@ func (sc *Saccade) Step() {
 	// write current state to table
 	sc.WriteToTable(sc.Table)
 }
+
