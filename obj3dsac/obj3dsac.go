@@ -95,7 +95,6 @@ func (ob *Obj3DSac) Defaults() {
 	ob.Objs.NTestPerCat = 2
 	// ob.Objs.OpenCatProps("cu3d_obj_cat_props.csv")
 	ob.CmdArgs()
-	fmt.Println(ob.RandomAction)
 	ob.Sac.Defaults()
 	ob.Sac.NObjScene = ob.NObjScene
 	ob.Sac.NObjSacLim = 1
@@ -134,22 +133,37 @@ func (ob *Obj3DSac) Defaults() {
 
 	ob.Trial.Scale = env.Trial
 	ob.Epoch.Scale = env.Epoch
-
-	// TODO removed
-	// ob.Env.Defaults()
 }
 
 func (ob *Obj3DSac) CmdArgs() {
 	hdir, _ := os.UserHomeDir()
 	path_default := filepath.Join(hdir, "ccn_images/CU3D_100_plus_models_obj")
 
-	flag.StringVar(&ob.Objs.Path, "obj_path", path_default, "Path to directory containing .obj files in subdirectories of categories")
+	// flags can't be defined more than once (e.g. such as separately in TrainEnv and TestEnv)
+	if flag.Lookup("obj_path") == nil {
+		flag.StringVar(&ob.Objs.Path, "obj_path", path_default, "Path to directory containing .obj files in subdirectories of categories")
+	} else {
+		ob.Objs.Path = flag.Lookup("obj_path").Value.(flag.Getter).Get().(string)
+	}
 
 	var cat_path string
-	flag.StringVar(&cat_path, "obj_cat_csv_path", "cu3d_obj_cat_props.csv", "Path to CSV containing object categories with Z-offset and y-rotated/mirrored values")
-	flag.IntVar(&ob.NObjScene, "n_obj_scene", 1, "Number of objects to simultaneously include in the scene")
+	if flag.Lookup("obj_cat_csv_path") == nil {
+		flag.StringVar(&cat_path, "obj_cat_csv_path", "cu3d_obj_cat_props.csv", "Path to CSV containing object categories with Z-offset and y-rotated/mirrored values")
+	} else {
+		cat_path = flag.Lookup("obj_cat_csv_path").Value.(flag.Getter).Get().(string)
+	}
 
-	flag.BoolVar(&ob.RandomAction, "rand_act", false, "Whether to use random actions or an external policy to generate actions.")
+	if flag.Lookup("n_obj_scene") == nil {
+		flag.IntVar(&ob.NObjScene, "n_obj_scene", 1, "Number of objects to simultaneously include in the scene")
+	} else {
+		ob.NObjScene = flag.Lookup("n_obj_scene").Value.(flag.Getter).Get().(int)
+	}
+
+	if flag.Lookup("rand_act") == nil {
+		flag.BoolVar(&ob.RandomAction, "rand_act", false, "Whether to use random actions or an external policy to generate actions.")
+	} else {
+		ob.RandomAction = flag.Lookup("rand_act").Value.(flag.Getter).Get().(bool)
+	}
 	flag.Parse()
 	ob.Objs.OpenCatProps(cat_path)
 }
@@ -196,7 +210,6 @@ func (ob *Obj3DSac) ObjList() []string {
 func (ob *Obj3DSac) Init() {
 	ob.ObjIdx = -1
 	nobj := len(ob.ObjList())
-	// fmt.Println(ob.ObjList())
 	ob.Order = rand.Perm(nobj)
 	ob.Sac.Init()
 }
@@ -342,11 +355,10 @@ func (ob *Obj3DSac) Step() {
 	ob.SaveTick()
 }
 
+// TODO ask about switching environment API over to this
 func (ob *Obj3DSac) Action(action map[string]etensor.Tensor) {
 	a := mat32.Vec2{}
-	// TODO add error handling
 	a, _ = ob.SacActionPop.Decode(action["SacPlan"])
-	fmt.Println("decoded sac plan", a)
 	ob.Sac.CondSetSacPlan(a)
 }
 
@@ -486,9 +498,6 @@ func (ob *Obj3DSac) SaveTick() {
 	velTsr := etensor.NewFloat64([]int{sc.NObjScene, 2}, nil, nil)
 	posNextTsr := etensor.NewFloat64([]int{sc.NObjScene, 2}, nil, nil)
 	rotTsr := etensor.NewFloat64([]int{sc.NObjScene, 3}, nil, nil)
-
-	fmt.Println(ob.Sac.ObjPos)
-	fmt.Println(ob.Sac.ObjVel)
 
 	for i := 0; i < sc.NObjScene; i++ {
 		cat_col.SetString([]int{row, i}, ob.CurCat[i])

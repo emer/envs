@@ -2,7 +2,6 @@ package main
 
 import (
 	"math/rand"
-	"fmt"
 
 	"github.com/emer/etable/etensor"
 	"github.com/emer/emergent/popcode"
@@ -34,10 +33,8 @@ func (ag *RandomAgent) Defaults() {
 }
 
 func (ag *RandomAgent) Step(state map[string]etensor.Tensor) map[string]etensor.Tensor {  //Float32 {  // TODO state/action structs, func Step(s *StateStruct) (a ActionStruct) {
-	fmt.Println("in randomAgent step")
 	ag.SacPlanFloat.X = 2.0 * (rand.Float32() -  0.5) * ag.SacGenMax
 	ag.SacPlanFloat.Y = 2.0 * (rand.Float32() -  0.5) * ag.SacGenMax
-	fmt.Println("sac plan in agent", ag.SacPlanFloat)
 	ag.SacPop.Encode(&ag.SacPlan, ag.SacPlanFloat, popcode.Set)
 	action := map[string]etensor.Tensor {"SacPlan": etensor.NewFloat32Shape(etensor.NewShape([]int{11, 11}, nil, nil), ag.SacPlan.Values)}
 	return action

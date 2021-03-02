@@ -174,7 +174,13 @@ func (ss *Sim) ConfigGui() *gi.Window {
 	tbar.AddAction(gi.ActOpts{Label: "Env Step", Icon: "step-fwd", Tooltip: "Step env.", UpdateFunc: func(act *gi.Action) {
 		act.SetActiveStateUpdt(!ss.Env.Ob.IsRunning)
 	}}, win.This(), func(recv, send ki.Ki, sig int64, data interface{}) {
-		ss.Env.Step()
+		if ss.Env.Passive {
+			ss.Env.Step()
+		} else {
+			action = ss.Agent.Step(state)
+			ss.Env.ActionMap(action)
+			ss.Env.Step()
+		}
 		vp.SetNeedsFullRender()
 	})
 

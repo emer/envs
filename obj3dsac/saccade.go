@@ -336,7 +336,7 @@ func (sc *Saccade) NextSaccade() {
 func (sc *Saccade) DoSaccade() {
 	sc.EyePos.X = sc.EyePos.X + sc.SacPlan.X
 	sc.EyePos.Y = sc.EyePos.Y + sc.SacPlan.Y
-	fmt.Println("saccade plan in DoSaccade in Saccade", sc.SacPlan)
+	// fmt.Println("saccade plan in DoSaccade in Saccade", sc.SacPlan)
 	sc.Saccade.X = sc.SacPlan.X
 	sc.Saccade.Y = sc.SacPlan.Y
 	sc.SacPlan.X = 0

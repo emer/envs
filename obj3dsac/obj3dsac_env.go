@@ -88,6 +88,9 @@ func (ev *Obj3DSacEnv) Defaults() {
 
 	ev.Path = "images/train"
 
+	ev.CurObj = make([]string, ev.NObjScene)
+	ev.CurCat = make([]string, ev.NObjScene)
+
 	ev.EyePop.Defaults()
 	ev.EyePop.Min.Set(-1.1, -1.1)
 	ev.EyePop.Max.Set(1.1, 1.1)
@@ -114,7 +117,16 @@ func (ev *Obj3DSacEnv) Defaults() {
 }
 
 func (ev *Obj3DSacEnv) CmdArgs() {
-	flag.BoolVar(&ev.Passive, "passive", false, "Whether to use pre-generated env trajectories")
+	if flag.Lookup("passive") == nil {
+		flag.BoolVar(&ev.Passive, "passive", false, "Whether to use pre-generated env trajectories")
+	} else {
+		ev.Passive = flag.Lookup("passive").Value.(flag.Getter).Get().(bool)
+	}
+	if flag.Lookup("n_obj_scene") == nil {
+		flag.IntVar(&ev.NObjScene, "n_obj_scene", 1, "Number of objects to simultaneously include in the scene")
+	} else {
+		ev.NObjScene = flag.Lookup("n_obj_scene").Value.(flag.Getter).Get().(int)
+	}
 }
 
 func (ev *Obj3DSacEnv) Init(run int) {
@@ -183,10 +195,15 @@ func (ev *Obj3DSacEnv) OpenImage() error {
 
 // FilterImage opens and filters current image
 func (ev *Obj3DSacEnv) FilterImage() error {
-	err := ev.OpenImage()
-	if err != nil {
-		return err
+	if ev.Passive {
+		err := ev.OpenImage()
+		if err != nil {
+			return err
+		}
+	} else {
+		ev.Image = ev.Ob.Image
 	}
+
 	// resize once for both..
 	tsz := ev.V1Med.ImgSize
 	isz := ev.Image.Bounds().Size()
@@ -243,18 +260,28 @@ func (ev *Obj3DSacEnv) EncodePops() {
 
 // SetCtrs sets ctrs from current row data
 func (ev *Obj3DSacEnv) SetCtrs() {
-	row := ev.CurRow()
-	epc := int(ev.Table.CellFloat("Epoch", row))
-	ev.Epoch.Set(epc)
-	trial := int(ev.Table.CellFloat("Trial", row))
-	ev.Trial.Set(trial)
-	tick := int(ev.Table.CellFloat("Tick", row))
-	ev.Tick.Set(tick)
+	if ev.Passive {
+		row := ev.CurRow()
+		epc := int(ev.Table.CellFloat("Epoch", row))
+		ev.Epoch.Set(epc)
+		trial := int(ev.Table.CellFloat("Trial", row))
+		ev.Trial.Set(trial)
+		tick := int(ev.Table.CellFloat("Tick", row))
+		ev.Tick.Set(tick)
 
-	// TODO how are orders of categories and objects preserved from image generation process?
-	for i := 0; i < ev.NObjScene; i++ {
-		ev.CurCat[i] = ev.Table.CellString("Cat", row + i)
-		ev.CurObj[i] = ev.Table.CellString("Obj", row + i)
+		// TODO how are orders of categories and objects preserved from image generation process?
+		for i := 0; i < ev.NObjScene; i++ {
+			ev.CurCat[i] = ev.Table.CellString("Cat", row + i)
+			ev.CurObj[i] = ev.Table.CellString("Obj", row + i)
+		}
+	} else {
+		ev.Epoch.Set(ev.Ob.Epoch.Cur)
+		ev.Trial.Set(ev.Ob.Trial.Cur)
+		ev.Tick.Set(ev.Ob.Sac.Tick.Cur)
+		for i := 0; i < ev.NObjScene; i++ {
+			ev.CurCat[i] = ev.Ob.CurCat[i]
+			ev.CurObj[i] = ev.Ob.CurObj[i]
+		}
 	}
 }
 
@@ -263,29 +290,17 @@ func (ev *Obj3DSacEnv) String() string {
 	return fmt.Sprintf("%s:%s_%d", ev.CurCat, ev.CurObj, ev.Tick.Cur)
 }
 
-func (ev *Obj3DSacEnv) StepAction(action map[string]etensor.Tensor) bool {
-	ev.Epoch.Same() // good idea to just reset all non-inner-most counters at start
-	ev.Trial.Same()
-
-	ev.Ob.Action(action)
-	ev.Ob.Step()
-
-	ev.SetCtrs()
-	ev.EncodePops()
-	ev.FilterImage()
-
-	return true
-}
-
 func (ev *Obj3DSacEnv) Step() bool {
 	ev.Epoch.Same() // good idea to just reset all non-inner-most counters at start
 	ev.Trial.Same()
 
 	// TODO a little weird to encode different objects as alternating rows in Table rather than encoding each row with a struct containing info for all objects for a single step
-	for i := 0; i < ev.NObjScene; i++ {
-		ev.Row.Incr() // auto-rotates
-
-		// ev.Action()
+	if ev.Passive {
+		for i := 0; i < ev.NObjScene; i++ {
+			ev.Row.Incr() // auto-rotates
+		}
+	} else {
+		ev.Ob.Step()
 	}
 
 	ev.SetCtrs()
@@ -335,14 +350,18 @@ func (ev *Obj3DSacEnv) State(element string) etensor.Tensor {
 	return nil
 }
 
+// TODO ask Randy about changing action API to just map[string]etensor.Tensor
 func (ev *Obj3DSacEnv) Action(element string, input etensor.Tensor) {
 	if element == "SacPlan" {
 		a := map[string]etensor.Tensor{"SacPlan": input}
 		ev.Ob.Action(a)
 	} else {
-		// TODO
-		// raise error
+		panic(element)
 	}
+}
+
+func (ev *Obj3DSacEnv) ActionMap(action map[string]etensor.Tensor) {
+	ev.Ob.Action(action)
 }
 
 // Compile-time check that implements Env interface
