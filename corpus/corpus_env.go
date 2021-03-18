@@ -242,7 +242,7 @@ func (ev *CorpusEnv) ConfigWordReps() {
 
 	ev.WordReps.SetShape([]int{nwords, ev.InputSize.Y, ev.InputSize.X}, nil, []string{"Y", "X"})
 
-	fname := fmt.Sprintf("data/word_reps_%dx%d_on%d_mind%d.json", ev.InputSize.Y, ev.InputSize.X, nper, mindif)
+	fname := fmt.Sprintf("word_reps_%dx%d_on%d_mind%d.json", ev.InputSize.Y, ev.InputSize.X, nper, mindif)
 
 	_, err := os.Stat(fname)
 	if os.IsNotExist(err) {
