@@ -8,6 +8,7 @@ import (
 	"bufio"
 	"bytes"
 	"fmt"
+	"math/rand"
 	"os"
 
 	"github.com/chewxy/math32"
@@ -17,6 +18,8 @@ import (
 	"github.com/emer/etable/etensor"
 	"github.com/goki/gi/gi"
 	"github.com/goki/ki/ints"
+	"github.com/goki/ki/ki"
+	"github.com/goki/ki/kit"
 	"github.com/goki/mat32"
 )
 
@@ -26,7 +29,7 @@ type FWorld struct {
 	Dsc       string                      `desc:"description of this environment"`
 	Size      evec.Vec2i                  `desc:"size of 2D world"`
 	PatSize   evec.Vec2i                  `desc:"size of patterns for mats, acts"`
-	World     etensor.Int                 `desc:"2D grid world, each cell is a material (mat)"`
+	World     etensor.Int                 `view:"no-inline" desc:"2D grid world, each cell is a material (mat)"`
 	Mats      []string                    `desc:"list of materials in the world, 0 = empty.  Any superpositions of states (e.g., CoveredFood) need to be discretely encoded, can be transformed through action rules"`
 	MatMap    map[string]int              `desc:"map of material name to index stored in world cell"`
 	MatColors map[string]string           `desc:"color strings for different material types, for view"`
@@ -65,6 +68,8 @@ type FWorld struct {
 	Episode     env.Ctr                     `view:"arbitrary counter incrementing over scenes within larger episode: feeding, drinking, exploring, etc"`
 }
 
+var KiT_FWorld = kit.Types.AddType(&FWorld{}, FWorldProps)
+
 func (ev *FWorld) Name() string { return ev.Nm }
 func (ev *FWorld) Desc() string { return ev.Dsc }
 
@@ -102,6 +107,10 @@ func (ev *FWorld) Config(ntrls int) {
 	ev.Trial.Max = ntrls
 
 	ev.ConfigImpl()
+
+	// uncomment to generate a new world
+	ev.GenWorld()
+	ev.SaveWorld("world.tsv")
 }
 
 // ConfigImpl does the automatic parts of configuration
@@ -111,6 +120,7 @@ func (ev *FWorld) ConfigImpl() {
 
 	ev.ProxMats = make([]int, 4)
 
+	ev.CurStates = make(map[string]*etensor.Float32)
 	ev.NextStates = make(map[string]*etensor.Float32)
 
 	dv := &etensor.Float32{}
@@ -130,11 +140,11 @@ func (ev *FWorld) ConfigImpl() {
 	ev.NextStates["ProxSoma"] = ps
 
 	vs := &etensor.Float32{}
-	ps.SetShape([]int{1, ev.PopSize}, nil, []string{"1", "Pop"})
+	vs.SetShape([]int{1, ev.PopSize}, nil, []string{"1", "Pop"})
 	ev.NextStates["Vestibular"] = vs
 
 	is := &etensor.Float32{}
-	ps.SetShape([]int{1, len(ev.Inters), ev.PopSize, 1}, nil, []string{"1", "Inters", "Pop", "1"})
+	is.SetShape([]int{1, len(ev.Inters), ev.PopSize, 1}, nil, []string{"1", "Inters", "Pop", "1"})
 	ev.NextStates["Inters"] = is
 
 	ev.CopyNextToCur() // get CurStates from NextStates
@@ -182,6 +192,10 @@ func (ev *FWorld) String() string {
 
 // Init is called to restart environment
 func (ev *FWorld) Init(run int) {
+
+	// note: could gen a new random world too..
+	ev.OpenWorld("world.tsv")
+
 	ev.Run.Init()
 	ev.Epoch.Init()
 	ev.Trial.Init()
@@ -276,6 +290,11 @@ func AngMod(ang int) int {
 func AngVec(ang int) mat32.Vec2 {
 	a := mat32.DegToRad(float32(AngMod(ang)))
 	v := mat32.Vec2{mat32.Cos(a), mat32.Sin(a)}
+	return NormVecLine(v)
+}
+
+// NormVec normalize vector for drawing a line
+func NormVecLine(v mat32.Vec2) mat32.Vec2 {
 	av := v.Abs()
 	if av.X > av.Y {
 		v = v.DivScalar(av.X)
@@ -436,6 +455,8 @@ func (ev *FWorld) TakeAct(act int) {
 
 	ev.IncState("Energy", -ecost)
 	ev.IncState("Hydra", -hcost)
+
+	ev.RenderState()
 }
 
 // RenderView renders the current view state to NextStates tensor input states
@@ -464,9 +485,9 @@ func (ev *FWorld) RenderProxSoma() {
 	ps.SetZeros()
 	for i := 0; i < 4; i++ {
 		if ev.ProxMats[i] != 0 {
-			ps.Set([]int{1, i, 0, 0}, 1) // on
+			ps.Set([]int{0, i, 0, 0}, 1) // on
 		} else {
-			ps.Set([]int{1, i, 1, 0}, 1) // off
+			ps.Set([]int{0, i, 1, 0}, 1) // off
 		}
 	}
 }
@@ -519,8 +540,14 @@ func (ev *FWorld) Step() bool {
 	return true
 }
 
-func (ev *FWorld) Action(element string, input etensor.Tensor) {
-	// nop
+func (ev *FWorld) Action(action string, nop etensor.Tensor) {
+	a, ok := ev.ActMap[action]
+	if !ok {
+		fmt.Printf("Action not recognized: %s\n", action)
+		return
+	}
+	ev.Act = a
+	ev.TakeAct(ev.Act)
 }
 
 func (ev *FWorld) Counter(scale env.TimeScales) (cur, prv int, chg bool) {
@@ -543,3 +570,120 @@ func (ev *FWorld) Counter(scale env.TimeScales) (cur, prv int, chg bool) {
 
 // Compile-time check that implements Env interface
 var _ env.Env = (*FWorld)(nil)
+
+var FWorldProps = ki.Props{
+	"ToolBar": ki.PropSlice{
+		{"OpenWorld", ki.Props{
+			"label": "Open World...",
+			"icon":  "file-open",
+			"desc":  "Open World from tsv file",
+			"Args": ki.PropSlice{
+				{"File Name", ki.Props{
+					"ext": ".tsv",
+				}},
+			},
+		}},
+		{"SaveWorld", ki.Props{
+			"label": "Save World...",
+			"icon":  "file-save",
+			"desc":  "Save World to tsv file",
+			"Args": ki.PropSlice{
+				{"File Name", ki.Props{
+					"ext": ".tsv",
+				}},
+			},
+		}},
+	},
+}
+
+// WorldLineHoriz draw horizontal line
+func (ev *FWorld) WorldLineHoriz(st, ed evec.Vec2i, mat int) {
+	sx := ints.MinInt(st.X, ed.X)
+	ex := ints.MaxInt(st.X, ed.X)
+	for x := sx; x <= ex; x++ {
+		ev.World.Set([]int{st.Y, x}, mat)
+	}
+}
+
+// WorldLineVert draw vertical line
+func (ev *FWorld) WorldLineVert(st, ed evec.Vec2i, mat int) {
+	sy := ints.MinInt(st.Y, ed.Y)
+	ey := ints.MaxInt(st.Y, ed.Y)
+	for y := sy; y <= ey; y++ {
+		ev.World.Set([]int{y, st.X}, mat)
+	}
+}
+
+// WorldLine draw line in world with given mat
+func (ev *FWorld) WorldLine(st, ed evec.Vec2i, mat int) {
+	di := ed.Sub(st)
+
+	if di.X == 0 {
+		ev.WorldLineVert(st, ed, mat)
+		return
+	}
+	if di.Y == 0 {
+		ev.WorldLineHoriz(st, ed, mat)
+		return
+	}
+
+	dv := di.ToVec2()
+	dst := dv.Length()
+	v := NormVecLine(dv)
+	op := st.ToVec2()
+	cp := op
+	gp := evec.Vec2i{}
+	for {
+		cp, gp = NextVecPoint(cp, v)
+		ev.World.Set([]int{gp.Y, gp.X}, mat)
+		d := cp.DistTo(op) // not very efficient, but works.
+		if d >= dst {
+			break
+		}
+	}
+}
+
+// WorldRandom distributes n of given material in random locations
+func (ev *FWorld) WorldRandom(n, mat int) {
+	cnt := 0
+	for cnt < n {
+		px := rand.Intn(ev.Size.X)
+		py := rand.Intn(ev.Size.Y)
+		ix := []int{py, px}
+		cm := ev.World.Value(ix)
+		if cm == 0 {
+			ev.World.Set(ix, mat)
+			cnt++
+		}
+	}
+}
+
+// WorldRect draw rectangle in world with given mat
+func (ev *FWorld) WorldRect(st, ed evec.Vec2i, mat int) {
+	ev.WorldLineHoriz(st, evec.Vec2i{ed.X, st.Y}, mat)
+	ev.WorldLineHoriz(evec.Vec2i{st.X, ed.Y}, evec.Vec2i{ed.X, ed.Y}, mat)
+	ev.WorldLineVert(st, evec.Vec2i{st.X, ed.Y}, mat)
+	ev.WorldLineVert(evec.Vec2i{ed.X, st.Y}, evec.Vec2i{ed.X, ed.Y}, mat)
+}
+
+// GenWorld generates a world -- edit to create in way desired
+func (ev *FWorld) GenWorld() {
+	wall := ev.MatMap["Wall"]
+	food := ev.MatMap["Food"]
+	water := ev.MatMap["Water"]
+	ev.World.SetZeros()
+	// always start with a wall around the entire world -- no seeing the turtles..
+	ev.WorldRect(evec.Vec2i{0, 0}, evec.Vec2i{ev.Size.X - 1, ev.Size.Y - 1}, wall)
+	ev.WorldRect(evec.Vec2i{10, 10}, evec.Vec2i{30, 30}, wall)
+	ev.WorldRect(evec.Vec2i{70, 70}, evec.Vec2i{90, 90}, wall)
+
+	// don't put anything in center starting point
+	ctr := ev.Size.DivScalar(2)
+	ev.World.Set([]int{ctr.Y, ctr.X}, wall)
+
+	ev.WorldRandom(50, food)
+	ev.WorldRandom(50, water)
+
+	// clear center
+	ev.World.Set([]int{ctr.Y, ctr.X}, 0)
+}
