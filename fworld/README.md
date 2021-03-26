@@ -32,5 +32,7 @@ There are 4 discrete movement actions, plus any additional optional interaction 
 
 This environment thus supports a rich, extensible, ecologically-based framework in which to explore the temporally-extended pursuit of basic survival goals.
 
+# Known Issues
 
+* The depth view scanner can see through non-H/V lines sometimes, if there is a "thin" diagonal aligned just so along its track.  use double-thick diagonal lines to be safe.
 

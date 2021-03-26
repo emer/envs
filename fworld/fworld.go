@@ -25,25 +25,28 @@ import (
 
 // FWorld is a flat-world grid-based environment
 type FWorld struct {
-	Nm        string                      `desc:"name of this environment"`
-	Dsc       string                      `desc:"description of this environment"`
-	Size      evec.Vec2i                  `desc:"size of 2D world"`
-	PatSize   evec.Vec2i                  `desc:"size of patterns for mats, acts"`
-	World     etensor.Int                 `view:"no-inline" desc:"2D grid world, each cell is a material (mat)"`
-	Mats      []string                    `desc:"list of materials in the world, 0 = empty.  Any superpositions of states (e.g., CoveredFood) need to be discretely encoded, can be transformed through action rules"`
-	MatMap    map[string]int              `desc:"map of material name to index stored in world cell"`
-	MatColors map[string]string           `desc:"color strings for different material types, for view"`
-	MatPats   map[string]*etensor.Float32 `desc:"patterns for each material -- must include empty"`
-	Acts      []string                    `desc:"list of actions: starts with: Stay, Left, Right, Forward, Back, then extensible"`
-	ActMap    map[string]int              `desc:"action map of action names to indexes"`
-	ActPats   map[string]*etensor.Float32 `desc:"patterns for each action"`
-	Inters    []string                    `desc:"list of interoceptive body states, represented as pop codes"`
-	InterMap  map[string]int              `desc:"map of interoceptive state names to indexes"`
-	Params    map[string]float32          `desc:"map of optional interoceptive and world-dynamic parameters -- cleaner to store in a map"`
-	AngInc    int                         `desc:"angle increment for rotation, in degrees -- defaults to 15"`
-	FOV       int                         `desc:"field of view in degrees, e.g., 180, must be even multiple of AngInc"`
-	PopSize   int                         `desc:"number of units in population codes"`
-	PopCode   popcode.OneD                `desc:"population code values, in normalized units"`
+	Nm         string                      `desc:"name of this environment"`
+	Dsc        string                      `desc:"description of this environment"`
+	Size       evec.Vec2i                  `desc:"size of 2D world"`
+	PatSize    evec.Vec2i                  `desc:"size of patterns for mats, acts"`
+	World      *etensor.Int                `view:"no-inline" desc:"2D grid world, each cell is a material (mat)"`
+	Mats       []string                    `desc:"list of materials in the world, 0 = empty.  Any superpositions of states (e.g., CoveredFood) need to be discretely encoded, can be transformed through action rules"`
+	MatMap     map[string]int              `desc:"map of material name to index stored in world cell"`
+	BarrierIdx int                         `desc:"index of material below which (inclusive) cannot move -- e.g., 1 for wall"`
+	MatPats    map[string]*etensor.Float32 `desc:"patterns for each material -- must include empty"`
+	Acts       []string                    `desc:"list of actions: starts with: Stay, Left, Right, Forward, Back, then extensible"`
+	ActMap     map[string]int              `desc:"action map of action names to indexes"`
+	ActPats    map[string]*etensor.Float32 `desc:"patterns for each action"`
+	Inters     []string                    `desc:"list of interoceptive body states, represented as pop codes"`
+	InterMap   map[string]int              `desc:"map of interoceptive state names to indexes"`
+	Params     map[string]float32          `desc:"map of optional interoceptive and world-dynamic parameters -- cleaner to store in a map"`
+	FOV        int                         `desc:"field of view in degrees, e.g., 180, must be even multiple of AngInc"`
+	AngInc     int                         `desc:"angle increment for rotation, in degrees -- defaults to 15"`
+	NRotAngles int                         `inactive:"+" desc:"total number of rotation angles in a circle"`
+	NFOVRays   int                         `inactive:"+" desc:"total number of FOV rays that are traced"`
+	ShowRays   bool                        `desc:"for debugging only: show the rays as they are traced out from point"`
+	PopSize    int                         `inactive:"+" desc:"number of units in population codes"`
+	PopCode    popcode.OneD                `desc:"population code values, in normalized units"`
 
 	// current state below (params above)
 	PosF        mat32.Vec2                  `inactive:"+" desc:"current location of agent, floating point"`
@@ -51,12 +54,12 @@ type FWorld struct {
 	Angle       int                         `inactive:"+" desc:"current angle, in degrees"`
 	RotAng      int                         `inactive:"+" desc:"angle that we just rotated -- drives vestibular"`
 	Act         int                         `inactive:"+" desc:"last action taken"`
-	Depths      []float32                   `inactive:"+" desc:"depth for each angle, raw"`
-	DepthLogs   []float32                   `inactive:"+" desc:"depth for each angle, normalized log"`
+	Depths      []float32                   `desc:"depth for each angle, raw"`
+	DepthLogs   []float32                   `desc:"depth for each angle, normalized log"`
 	ViewMats    []int                       `inactive:"+" desc:"material at each angle"`
 	FoveaMat    int                         `inactive:"+" desc:"material at fovea"`
 	FoveaDist   float32                     `inactive:"+" desc:"raw depth to foveal material"`
-	ProxMats    []int                       `inactive:"+" desc:"material at each right angle: front, left, right back"`
+	ProxMats    []int                       `desc:"material at each right angle: front, left, right back"`
 	InterStates map[string]float32          `inactive:"+" desc:"floating point value of internal states -- dim of Inters"`
 	CurStates   map[string]*etensor.Float32 `desc:"current rendered state tensors -- extensible map"`
 	NextStates  map[string]*etensor.Float32 `desc:"next rendered state tensors -- updated from actions"`
@@ -78,9 +81,7 @@ func (ev *FWorld) Config(ntrls int) {
 	ev.Nm = "Demo"
 	ev.Dsc = "Example world with basic food / water / eat / drink actions"
 	ev.Mats = []string{"Empty", "Wall", "Food", "Water"}
-	ev.MatColors = map[string]string{
-		"Empty": "lightgrey", "Wall": "black", "Food": "orange", "Water": "blue",
-	}
+	ev.BarrierIdx = 1
 	ev.Acts = []string{"Stay", "Left", "Right", "Forward", "Backward", "Eat", "Drink"}
 	ev.Inters = []string{"Energy", "Hydra", "BumpPain", "FoodRew", "WaterRew"}
 
@@ -116,6 +117,10 @@ func (ev *FWorld) Config(ntrls int) {
 // ConfigImpl does the automatic parts of configuration
 // generally does not require editing
 func (ev *FWorld) ConfigImpl() {
+	ev.NFOVRays = (ev.FOV / ev.AngInc) + 1
+	ev.NRotAngles = (360 / ev.AngInc) + 1
+
+	ev.World = &etensor.Int{}
 	ev.World.SetShape([]int{ev.Size.Y, ev.Size.X}, nil, []string{"Y", "X"})
 
 	ev.ProxMats = make([]int, 4)
@@ -124,12 +129,11 @@ func (ev *FWorld) ConfigImpl() {
 	ev.NextStates = make(map[string]*etensor.Float32)
 
 	dv := &etensor.Float32{}
-	nang := (ev.FOV / ev.AngInc) + 1
-	dv.SetShape([]int{1, nang, ev.PopSize, 1}, nil, []string{"1", "Angle", "Pop", "1"})
+	dv.SetShape([]int{1, ev.NFOVRays, ev.PopSize, 1}, nil, []string{"1", "Angle", "Pop", "1"})
 	ev.NextStates["DepthView"] = dv
-	ev.Depths = make([]float32, nang)
-	ev.DepthLogs = make([]float32, nang)
-	ev.ViewMats = make([]int, nang)
+	ev.Depths = make([]float32, ev.NFOVRays)
+	ev.DepthLogs = make([]float32, ev.NFOVRays)
+	ev.ViewMats = make([]int, ev.NFOVRays)
 
 	fv := &etensor.Float32{}
 	fv.SetShape([]int{ev.PatSize.Y, ev.PatSize.X}, nil, []string{"Y", "X"})
@@ -257,13 +261,16 @@ func (ev *FWorld) OpenWorld(filename gi.FileName) error {
 	ev.World.SetZeros()
 	scan := bufio.NewScanner(fp)
 	for y := 0; y < ev.Size.Y; y++ {
+		if !scan.Scan() {
+			break
+		}
 		ln := scan.Bytes()
 		sz := len(ln)
 		if sz == 0 {
 			break
 		}
 		sp := bytes.Split(ln, []byte("\t"))
-		sz = ints.MinInt(sz, len(sp)-1)
+		sz = ints.MinInt(ev.Size.X, len(sp)-1)
 		for x := 0; x < ev.Size.X; x++ {
 			ms := string(sp[x])
 			if ms == "" {
@@ -315,10 +322,11 @@ func NextVecPoint(cp, v mat32.Vec2) (mat32.Vec2, evec.Vec2i) {
 
 // ScanView does simple ray-tracing to find depth and material along each angle vector
 func (ev *FWorld) ScanView() {
+	nmat := len(ev.Mats)
 	idx := 0
 	hang := ev.FOV / 2
 	maxld := math32.Log(1 + mat32.Sqrt(float32(ev.Size.X*ev.Size.X+ev.Size.Y*ev.Size.Y)))
-	for ang := -hang; ang <= hang; ang += ev.AngInc {
+	for ang := hang; ang >= -hang; ang -= ev.AngInc {
 		v := AngVec(ang + ev.Angle)
 		op := ev.PosF
 		cp := op
@@ -334,9 +342,12 @@ func (ev *FWorld) ScanView() {
 				break
 			}
 			mat = ev.World.Value([]int{gp.Y, gp.X})
-			if mat != 0 {
+			if mat > 0 && mat <= ev.BarrierIdx {
 				depth = cp.DistTo(op)
 				break
+			}
+			if ev.ShowRays {
+				ev.World.Set([]int{gp.Y, gp.X}, nmat+idx*2) // visualization
 			}
 		}
 		ev.Depths[idx] = depth
@@ -395,7 +406,9 @@ func (ev *FWorld) TakeAct(act int) {
 
 	ev.RotAng = 0
 
-	front := ev.Mats[ev.ProxMats[0]] // state in front
+	frmat := ints.MinInt(ev.ProxMats[0], 3)
+	behmat := ev.ProxMats[3] // behind
+	front := ev.Mats[frmat]  // state in front
 
 	mvc := ev.Params["MoveCost"]
 	rotc := ev.Params["RotCost"]
@@ -407,19 +420,19 @@ func (ev *FWorld) TakeAct(act int) {
 	switch as {
 	case "Stay":
 	case "Left":
-		ev.RotAng = -ev.AngInc
-		ev.Angle = AngMod(ev.Angle - ev.AngInc)
+		ev.RotAng = ev.AngInc
+		ev.Angle = AngMod(ev.Angle + ev.RotAng)
 		ecost = rotc
 		hcost = rotc
 	case "Right":
-		ev.RotAng = ev.AngInc
-		ev.Angle = AngMod(ev.Angle + ev.AngInc)
+		ev.RotAng = -ev.AngInc
+		ev.Angle = AngMod(ev.Angle + ev.RotAng)
 		ecost = rotc
 		hcost = rotc
 	case "Forward":
 		ecost = mvc
 		hcost = mvc
-		if front != "Empty" { // barrier in front
+		if frmat > 0 && frmat <= ev.BarrierIdx {
 			ev.InterStates["BumpPain"] = 1
 			ecost += bumpc
 			hcost += bumpc
@@ -429,7 +442,7 @@ func (ev *FWorld) TakeAct(act int) {
 	case "Backward":
 		ecost = mvc
 		hcost = mvc
-		if ev.ProxMats[3] != 0 { // barrier in back
+		if behmat > 0 && behmat <= ev.BarrierIdx {
 			ev.InterStates["BumpPain"] = 1
 			ecost += bumpc
 			hcost += bumpc
@@ -462,8 +475,7 @@ func (ev *FWorld) TakeAct(act int) {
 // RenderView renders the current view state to NextStates tensor input states
 func (ev *FWorld) RenderView() {
 	dv := ev.NextStates["DepthView"]
-	nang := dv.Dim(1)
-	for i := 0; i < nang; i++ {
+	for i := 0; i < ev.NFOVRays; i++ {
 		sv := dv.SubSpace([]int{0, i}).(*etensor.Float32)
 		ev.PopCode.Encode(&sv.Values, ev.DepthLogs[i], ev.PopSize, false)
 	}
@@ -676,6 +688,8 @@ func (ev *FWorld) GenWorld() {
 	ev.WorldRect(evec.Vec2i{0, 0}, evec.Vec2i{ev.Size.X - 1, ev.Size.Y - 1}, wall)
 	ev.WorldRect(evec.Vec2i{10, 10}, evec.Vec2i{30, 30}, wall)
 	ev.WorldRect(evec.Vec2i{70, 70}, evec.Vec2i{90, 90}, wall)
+
+	ev.WorldLine(evec.Vec2i{40, 40}, evec.Vec2i{80, 50}, wall)
 
 	// don't put anything in center starting point
 	ctr := ev.Size.DivScalar(2)
