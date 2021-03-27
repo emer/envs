@@ -53,9 +53,9 @@ var TheSim Sim
 // Config configures all the elements using the standard functions
 func (ss *Sim) Config() {
 	// order: Empty, wall, food, water
-	ss.MatColors = []string{"lightgrey", "black", "orange", "blue"}
+	ss.MatColors = []string{"lightgrey", "black", "orange", "blue", "brown", "navy"}
 
-	ss.StepN = 8
+	ss.StepN = 10
 	ss.World.Config(1000)
 	ss.World.Init(0)
 
@@ -63,11 +63,13 @@ func (ss *Sim) Config() {
 
 	sch := etable.Schema{
 		{"TrialName", etensor.STRING, nil, nil},
-		{"DepthView", etensor.FLOAT32, ss.World.CurStates["DepthView"].Shape.Shp, nil},
+		{"Depth", etensor.FLOAT32, ss.World.CurStates["Depth"].Shape.Shp, nil},
+		{"FovDepth", etensor.FLOAT32, ss.World.CurStates["FovDepth"].Shape.Shp, nil},
 		{"Fovea", etensor.FLOAT32, ss.World.CurStates["Fovea"].Shape.Shp, nil},
 		{"ProxSoma", etensor.FLOAT32, ss.World.CurStates["ProxSoma"].Shape.Shp, nil},
 		{"Vestibular", etensor.FLOAT32, ss.World.CurStates["Vestibular"].Shape.Shp, nil},
 		{"Inters", etensor.FLOAT32, ss.World.CurStates["Inters"].Shape.Shp, nil},
+		{"Action", etensor.FLOAT32, ss.World.CurStates["Action"].Shape.Shp, nil},
 	}
 	ss.State = etable.NewTable("input")
 	ss.State.SetFromSchema(sch, 1)
@@ -94,6 +96,18 @@ func (ss *Sim) Step() {
 	ss.Trace.Set([]int{ss.World.PosI.Y, ss.World.PosI.X}, nc+ss.World.Angle/ss.World.AngInc)
 
 	ss.UpdtViews()
+}
+
+func (ss *Sim) StepAuto() {
+	act := ss.World.GenAct()
+	ss.World.Action(ss.World.Acts[act], nil)
+	ss.Step()
+}
+
+func (ss *Sim) StepAutoN() {
+	for i := 0; i < ss.StepN; i++ {
+		ss.StepAuto()
+	}
 }
 
 func (ss *Sim) Init() {
@@ -210,26 +224,59 @@ func (ss *Sim) ConfigGui() *gi.Window {
 	tbar.AddAction(gi.ActOpts{Label: "Init", Icon: "reset", Tooltip: "Init env."}, win.This(),
 		func(recv, send ki.Ki, sig int64, data interface{}) {
 			ss.Init()
+			vp.SetFullReRender()
 		})
+
+	tbar.AddAction(gi.ActOpts{Label: "Step", Icon: "step-fwd", Tooltip: "Step one auto-generated action"}, win.This(),
+		func(recv, send ki.Ki, sig int64, data interface{}) {
+			ss.StepAuto()
+			vp.SetFullReRender()
+		})
+
+	tbar.AddAction(gi.ActOpts{Label: "StepN", Icon: "forward", Tooltip: "Step N auto-generated actions"}, win.This(),
+		func(recv, send ki.Ki, sig int64, data interface{}) {
+			ss.StepAutoN()
+			vp.SetFullReRender()
+		})
+
+	tbar.AddSeparator("sep-step")
 
 	tbar.AddAction(gi.ActOpts{Label: "Left", Icon: "wedge-left", Tooltip: "Rotate Left"}, win.This(),
 		func(recv, send ki.Ki, sig int64, data interface{}) {
 			ss.Left()
+			vp.SetFullReRender()
 		})
 
 	tbar.AddAction(gi.ActOpts{Label: "Right", Icon: "wedge-right", Tooltip: "Rotate Right"}, win.This(),
 		func(recv, send ki.Ki, sig int64, data interface{}) {
 			ss.Right()
+			vp.SetFullReRender()
 		})
 
 	tbar.AddAction(gi.ActOpts{Label: "Forward", Icon: "wedge-up", Tooltip: "Step Forward"}, win.This(),
 		func(recv, send ki.Ki, sig int64, data interface{}) {
 			ss.Forward()
+			vp.SetFullReRender()
 		})
 
 	tbar.AddAction(gi.ActOpts{Label: "Backward", Icon: "wedge-down", Tooltip: "Step Backward"}, win.This(),
 		func(recv, send ki.Ki, sig int64, data interface{}) {
 			ss.Backward()
+			vp.SetFullReRender()
+		})
+
+	tbar.AddSeparator("sep-eat")
+
+	tbar.AddAction(gi.ActOpts{Label: "Eat", Icon: "field", Tooltip: "Eat food -- only if directly in front"}, win.This(),
+		func(recv, send ki.Ki, sig int64, data interface{}) {
+			ss.Eat()
+			vp.SetFullReRender()
+		})
+
+	tbar.AddAction(gi.ActOpts{Label: "Drink", Icon: "svg", Tooltip: "Drink water -- only if directly in front"}, win.This(),
+		func(recv, send ki.Ki, sig int64, data interface{}) {
+			ss.Drink()
+			vp.SetFullReRender()
 		})
 
 	tbar.AddSeparator("sep-file")
@@ -242,6 +289,16 @@ func (ss *Sim) ConfigGui() *gi.Window {
 	tbar.AddAction(gi.ActOpts{Label: "Save World", Icon: "file-save", Tooltip: "Save World to .tsv file"}, win.This(),
 		func(recv, send ki.Ki, sig int64, data interface{}) {
 			giv.CallMethod(&ss.World, "SaveWorld", vp)
+		})
+
+	tbar.AddAction(gi.ActOpts{Label: "Open Pats", Icon: "file-open", Tooltip: "Open bit patterns from .json file"}, win.This(),
+		func(recv, send ki.Ki, sig int64, data interface{}) {
+			giv.CallMethod(&ss.World, "OpenPats", vp)
+		})
+
+	tbar.AddAction(gi.ActOpts{Label: "Save Pats", Icon: "file-save", Tooltip: "Save bit patterns to .json file"}, win.This(),
+		func(recv, send ki.Ki, sig int64, data interface{}) {
+			giv.CallMethod(&ss.World, "SavePats", vp)
 		})
 
 	vp.UpdateEndNoSig(updt)
