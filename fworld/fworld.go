@@ -10,11 +10,13 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
+	"math"
 	"math/rand"
 	"os"
 
 	"github.com/chewxy/math32"
 	"github.com/emer/emergent/env"
+	"github.com/emer/emergent/erand"
 	"github.com/emer/emergent/evec"
 	"github.com/emer/emergent/popcode"
 	"github.com/emer/etable/etensor"
@@ -47,6 +49,7 @@ type FWorld struct {
 	NFOVRays    int                         `inactive:"+" desc:"total number of FOV rays that are traced"`
 	ShowRays    bool                        `desc:"for debugging only: show the main depth rays as they are traced out from point"`
 	ShowFovRays bool                        `desc:"for debugging only: show the fovea rays as they are traced out from point"`
+	TraceActGen bool                        `desc:"for debugging, print out a trace of the action generation logic"`
 	FoveaSize   int                         `desc:"number of items on each size of the fovea, in addition to center (0 or more)"`
 	FoveaAngInc int                         `desc:"scan angle for fovea"`
 	PopSize     int                         `inactive:"+" desc:"number of units in population codes"`
@@ -58,8 +61,8 @@ type FWorld struct {
 	Angle         int                         `inactive:"+" desc:"current angle, in degrees"`
 	RotAng        int                         `inactive:"+" desc:"angle that we just rotated -- drives vestibular"`
 	Act           int                         `inactive:"+" desc:"last action taken"`
-	Depths        []float32                   `desc:"depth for each angle, raw"`
-	DepthLogs     []float32                   `desc:"depth for each angle, normalized log"`
+	Depths        []float32                   `desc:"depth for each angle (NFOVRays), raw"`
+	DepthLogs     []float32                   `desc:"depth for each angle (NFOVRays), normalized log"`
 	ViewMats      []int                       `inactive:"+" desc:"material at each angle"`
 	FovMats       []int                       `desc:"materials at fovea, L-R"`
 	FovDepths     []float32                   `desc:"raw depths to foveal materials, L-R"`
@@ -96,13 +99,12 @@ func (ev *FWorld) Config(ntrls int) {
 
 	ev.Params = make(map[string]float32)
 
-	ev.Params["StepCost"] = 0.001  // additional decrement due to stepping forward
 	ev.Params["TimeCost"] = 0.001  // decrement due to existing for 1 unit of time, in energy and hydration
-	ev.Params["MoveCost"] = 0.001  // additional decrement due to moving
+	ev.Params["MoveCost"] = 0.002  // additional decrement due to moving
 	ev.Params["RotCost"] = 0.001   // additional decrement due to rotating one step
 	ev.Params["BumpCost"] = 0.01   // additional decrement in addition to move cost, for bumping into things
-	ev.Params["EatCost"] = 0.001   // additional decrement in hydration due to eating
-	ev.Params["DrinkCost"] = 0.001 // additional decrement in energy due to drinking
+	ev.Params["EatCost"] = 0.005   // additional decrement in hydration due to eating
+	ev.Params["DrinkCost"] = 0.005 // additional decrement in energy due to drinking
 	ev.Params["EatVal"] = 0.9      // increment in energy due to eating one unit of food
 	ev.Params["DrinkVal"] = 0.9    // increment in hydration due to drinking one unit of water
 	ev.Params["FoodRefresh"] = 100 // time steps before food is refreshed
@@ -112,12 +114,16 @@ func (ev *FWorld) Config(ntrls int) {
 	ev.PatSize.Set(5, 5)
 	ev.AngInc = 15
 	ev.FOV = 180
-	ev.ShowRays = false
 	ev.FoveaSize = 1
 	ev.FoveaAngInc = 5
 	ev.PopSize = 12
 	ev.PopCode.Defaults()
 	ev.PopCode.SetRange(-0.2, 1.2, 0.1)
+
+	// debugging options:
+	ev.ShowRays = false
+	ev.ShowFovRays = false
+	ev.TraceActGen = false
 
 	ev.Trial.Max = ntrls
 
@@ -237,7 +243,7 @@ func (ev *FWorld) State(element string) etensor.Tensor {
 
 // String returns the current state as a string
 func (ev *FWorld) String() string {
-	return fmt.Sprintf("Pos_%d_%d Ang_%d", ev.PosI.X, ev.PosI.Y, ev.Angle)
+	return fmt.Sprintf("Evt_%d_Pos_%d_%d_Ang_%d_Act_%s", ev.Event.Cur, ev.PosI.X, ev.PosI.Y, ev.Angle, ev.Acts[ev.Act])
 }
 
 // Init is called to restart environment
@@ -375,7 +381,12 @@ func (ev *FWorld) OpenPats(filename gi.FileName) error {
 
 // AngMod returns angle modulo within 360 degrees
 func AngMod(ang int) int {
-	return ang % 360
+	if ang < 0 {
+		ang += 360
+	} else if ang > 360 {
+		ang -= 360
+	}
+	return ang
 }
 
 // AngVec returns the incremental vector to use for given angle, in deg
@@ -516,6 +527,7 @@ func (ev *FWorld) IncState(nm string, inc float32) {
 
 // PassTime does effects of time, initializes rewards
 func (ev *FWorld) PassTime() {
+	ev.Scene.Same()
 	tc := ev.Params["TimeCost"]
 	ev.IncState("Energy", -tc)
 	ev.IncState("Hydra", -tc)
@@ -566,7 +578,7 @@ func (ev *FWorld) RefreshWorld() {
 			}
 		case wmat:
 			if t+wr < ct {
-				setmat = fmat
+				setmat = wmat
 			}
 		}
 		if setmat != 0 {
@@ -639,6 +651,8 @@ func (ev *FWorld) TakeAct(act int) {
 			ecost -= ev.Params["EatVal"]
 			ev.AddNewEventRefresh(ev.NewEvent(act, frmat, ev.ProxPos[0]))
 			ev.SetWorld(ev.ProxPos[0], ev.MatMap["FoodWas"])
+			ev.Event.Set(0)
+			ev.Scene.Incr()
 		}
 	case "Drink":
 		if front == "Water" {
@@ -647,6 +661,8 @@ func (ev *FWorld) TakeAct(act int) {
 			hcost -= ev.Params["DrinkVal"]
 			ev.AddNewEventRefresh(ev.NewEvent(act, frmat, ev.ProxPos[0]))
 			ev.SetWorld(ev.ProxPos[0], ev.MatMap["WaterWas"])
+			ev.Event.Set(0)
+			ev.Scene.Incr()
 		}
 	}
 	ev.ScanDepth()
@@ -711,7 +727,7 @@ func (ev *FWorld) RenderInters() {
 // RenderVestib renders vestibular state
 func (ev *FWorld) RenderVestibular() {
 	vs := ev.NextStates["Vestibular"]
-	nv := 0.5*(float32(ev.RotAng)/15) + 0.5
+	nv := 0.5*(float32(-ev.RotAng)/15) + 0.5
 	ev.PopCode.Encode(&vs.Values, nv, ev.PopSize, false)
 }
 
@@ -754,6 +770,7 @@ func (ev *FWorld) Step() bool {
 	ev.Epoch.Same() // good idea to just reset all non-inner-most counters at start
 	ev.CopyNextToCur()
 	ev.Tick.Incr()
+	ev.Event.Incr()
 	ev.RefreshWorld()
 	if ev.Trial.Incr() { // true if wraps around Max back to 0
 		ev.Epoch.Incr()
@@ -920,10 +937,11 @@ func (ev *FWorld) GenWorld() {
 	ev.World.SetZeros()
 	// always start with a wall around the entire world -- no seeing the turtles..
 	ev.WorldRect(evec.Vec2i{0, 0}, evec.Vec2i{ev.Size.X - 1, ev.Size.Y - 1}, wall)
-	ev.WorldRect(evec.Vec2i{10, 10}, evec.Vec2i{30, 30}, wall)
-	ev.WorldRect(evec.Vec2i{70, 70}, evec.Vec2i{90, 90}, wall)
+	ev.WorldRect(evec.Vec2i{20, 20}, evec.Vec2i{40, 40}, wall)
+	ev.WorldRect(evec.Vec2i{60, 60}, evec.Vec2i{80, 80}, wall)
 
-	ev.WorldLine(evec.Vec2i{40, 40}, evec.Vec2i{80, 50}, wall)
+	ev.WorldLine(evec.Vec2i{60, 20}, evec.Vec2i{80, 40}, wall) // double-thick lines = no leak
+	ev.WorldLine(evec.Vec2i{60, 19}, evec.Vec2i{80, 39}, wall)
 
 	// don't put anything in center starting point
 	ctr := ev.Size.DivScalar(2)
@@ -939,37 +957,91 @@ func (ev *FWorld) GenWorld() {
 ////////////////////////////////////////////////////////////////////
 // Subcortex / Instinct
 
-// GenAct generates an action for current situation based on simple
+// ActGenTrace prints trace of act gen if enabled
+func (ev *FWorld) ActGenTrace(desc string, act int) {
+	if !ev.TraceActGen {
+		return
+	}
+	fmt.Printf("%s: act: %s\n", desc, ev.Acts[act])
+}
+
+// ActGen generates an action for current situation based on simple
 // coded heuristics -- i.e., what subcortical evolutionary instincts provide.
-func (ev *FWorld) GenAct() int {
+func (ev *FWorld) ActGen() int {
 	wall := ev.MatMap["Wall"]
 	food := ev.MatMap["Food"]
 	water := ev.MatMap["Water"]
 	left := ev.ActMap["Left"]
 	right := ev.ActMap["Right"]
+	eat := ev.ActMap["Eat"]
 
 	nmat := len(ev.Mats)
 	frmat := ints.MinInt(ev.ProxMats[0], nmat)
 
+	// get info about what is in fovea
 	fsz := 1 + 2*ev.FoveaSize
 	fwt := float32(0)
 	wwt := float32(0)
 	fdp := float32(100000)
 	wdp := float32(100000)
 	fovdp := float32(100000)
+	fovnonwall := 0
 	for i := 0; i < fsz; i++ {
-		if ev.FovMats[i] == water {
+		mat := ev.FovMats[i]
+		switch {
+		case mat == water:
 			wwt += 1 - ev.FovDepthLogs[i] // more weight if closer
 			wdp = mat32.Min(wdp, ev.FovDepths[i])
-		}
-		if ev.FovMats[i] == food {
+		case mat == food:
 			fwt += 1 - ev.FovDepthLogs[i] // more weight if closer
 			fdp = mat32.Min(fdp, ev.FovDepths[i])
+		case mat <= ev.BarrierIdx:
+		default:
+			fovnonwall = mat
 		}
 		fovdp = mat32.Min(fovdp, ev.FovDepths[i])
 	}
 	fwt *= 1 - ev.InterStates["Energy"] // weight by need
 	wwt *= 1 - ev.InterStates["Hydra"]
+
+	fovmat := ev.FovMats[ev.FoveaSize]
+	fovmats := ev.Mats[fovmat]
+
+	// get info about full depth view
+	minl := 1.0
+	minr := 1.0
+	avgl := 0.0
+	avgr := 0.0
+	hang := ev.NFOVRays / 2
+	for i := 0; i < ev.NFOVRays; i++ {
+		dp := float64(ev.DepthLogs[i])
+		if i < hang-1 {
+			minl = math.Min(minl, dp)
+			avgl += dp
+		} else if i > hang+1 {
+			minr = math.Min(minr, dp)
+			avgr += dp
+		}
+	}
+	ldf := 1 - minl
+	rdf := 1 - minr
+	if math.Abs(minl-minr) < 0.1 {
+		ldf = 1 - (avgl / float64(hang-1))
+		rdf = 1 - (avgr / float64(hang-1))
+	}
+	smaxpow := 10.0
+	rlp := float64(.5)
+	if ldf+rdf > 0 {
+		rpow := math.Exp(rdf * smaxpow)
+		lpow := math.Exp(ldf * smaxpow)
+		rlp = float64(lpow / (rpow + lpow))
+	}
+	rlact := left
+	if erand.BoolProb(rlp, -1) {
+		rlact = right
+	}
+	// fmt.Printf("rlp: %.3g  ldf: %.3g  rdf: %.3g  act: %s\n", rlp, ldf, rdf, ev.Acts[rlact])
+	rlps := fmt.Sprintf("%.3g", rlp)
 
 	lastact := ev.Act
 	frnd := rand.Float32()
@@ -979,61 +1051,62 @@ func (ev *FWorld) GenAct() int {
 	case frmat == wall:
 		if lastact == left || lastact == right {
 			act = lastact // keep going
+			ev.ActGenTrace("at wall, keep turning", act)
 		} else {
-			switch {
-			case frnd < 0.2:
-				act = lastact // continue
-			case frnd < 0.55:
-				act = left
-			case frnd < 0.9:
-				act = right
-			}
+			act = rlact
+			ev.ActGenTrace(fmt.Sprintf("at wall, rlp: %s, turn", rlps), act)
 		}
 	case frmat == food:
 		act = ev.ActMap["Eat"]
+		ev.ActGenTrace("at food", act)
 	case frmat == water:
 		act = ev.ActMap["Drink"]
+		ev.ActGenTrace("at water", act)
 	case fwt > wwt:
-		fmt.Printf("fwt: %g > wwt: %g\n", fwt, wwt)
+		wts := fmt.Sprintf("fwt: %g > wwt: %g, dist: %g", fwt, wwt, fdp)
 		if fdp > 20 { // far away
-			switch {
-			case frnd < 0.33:
-				act = left
-			case frnd < 0.66:
-				act = right
+			if frnd < 0.2 {
+				act = rlact
+				ev.ActGenTrace(fmt.Sprintf("far food in view (%s), explore, rlp: %s, turn", wts, rlps), act)
+			} else {
+				ev.ActGenTrace("far food in view "+wts, act)
 			}
-		} // else go forward
+		} else {
+			ev.ActGenTrace("close food in view "+wts, act)
+		}
 	case wwt > fwt:
-		fmt.Printf("wwt: %g > fwt: %g\n", wwt, fwt)
+		wts := fmt.Sprintf("wwt: %g > fwt: %g, dist: %g", wwt, fwt, wdp)
 		if wdp > 20 { // far away
-			switch {
-			case frnd < 0.33:
-				act = left
-			case frnd < 0.66:
-				act = right
+			if frnd < 0.2 {
+				act = rlact
+				ev.ActGenTrace(fmt.Sprintf("far water in view (%s), explore, rlp: %s, turn", wts, rlps), act)
+			} else {
+				ev.ActGenTrace("far water in view "+wts, act)
 			}
-		} // else go forward
-	case fovdp < 4: // closer to hitting wall
+		} else {
+			ev.ActGenTrace("close water in view "+wts, act)
+		}
+	case fovdp < 4 && fovnonwall == 0: // close to wall
 		if lastact == left || lastact == right {
 			act = lastact // keep going
+			ev.ActGenTrace("close to: "+fovmats+" keep turning", act)
 		} else {
-			switch {
-			case frnd < 0.2:
-				act = lastact // continue
-			case frnd < 0.55:
-				act = left
-			case frnd < 0.9:
-				act = right
-			}
+			act = rlact
+			ev.ActGenTrace(fmt.Sprintf("close to: %s rlp: %s, turn", fovmats, rlps), act)
 		}
 	default: // random explore -- nothing obvious
 		switch {
-		case frnd < 0.25:
+		case frnd < 0.25 && lastact < eat:
 			act = lastact // continue
-		case frnd < 0.5:
+			ev.ActGenTrace("looking at: "+fovmats+" repeat last act", act)
+		case frnd < 0.4:
 			act = left
-		case frnd < 0.75:
+			ev.ActGenTrace("looking at: "+fovmats+" turn", act)
+		case frnd < 0.55:
 			act = right
+			ev.ActGenTrace("looking at: "+fovmats+" turn", act)
+		default:
+			ev.ActGenTrace("looking at: "+fovmats+" go", act)
 		}
 	}
 

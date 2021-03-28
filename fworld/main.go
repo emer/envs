@@ -45,6 +45,8 @@ type Sim struct {
 	Win       *gi.Window         `view:"-" desc:"main GUI window"`
 	ToolBar   *gi.ToolBar        `view:"-" desc:"the master toolbar"`
 	MatColors []string           `desc:"color strings in material order"`
+	StopNow   bool               `view:"-" desc:"flag to stop running"`
+	IsRunning bool               `view:"-" desc:"true when running"`
 }
 
 // TheSim is the overall state for this simulation
@@ -73,7 +75,7 @@ func (ss *Sim) Config() {
 	}
 	ss.State = etable.NewTable("input")
 	ss.State.SetFromSchema(sch, 1)
-	ss.State.SetMetaData("TrialName:width", "40")
+	ss.State.SetMetaData("TrialName:width", "50")
 }
 
 func (ss *Sim) UpdtViews() {
@@ -92,6 +94,10 @@ func (ss *Sim) Step() {
 	}
 	ss.State.SetCellString("TrialName", 0, ss.World.String())
 
+	if ss.World.Scene.Chg { // something important happened, refresh
+		ss.Trace.CopyFrom(ss.World.World)
+	}
+
 	nc := len(ss.World.Mats)
 	ss.Trace.Set([]int{ss.World.PosI.Y, ss.World.PosI.X}, nc+ss.World.Angle/ss.World.AngInc)
 
@@ -99,7 +105,7 @@ func (ss *Sim) Step() {
 }
 
 func (ss *Sim) StepAuto() {
-	act := ss.World.GenAct()
+	act := ss.World.ActGen()
 	ss.World.Action(ss.World.Acts[act], nil)
 	ss.Step()
 }
@@ -108,6 +114,23 @@ func (ss *Sim) StepAutoN() {
 	for i := 0; i < ss.StepN; i++ {
 		ss.StepAuto()
 	}
+}
+
+func (ss *Sim) Run() {
+	ss.IsRunning = true
+	ss.ToolBar.UpdateActions()
+	for !ss.StopNow {
+		ss.Win.Viewport.SetFullReRender()
+		ss.StepAuto()
+		ss.Win.PollEvents()
+	}
+	ss.IsRunning = false
+	ss.StopNow = false
+	ss.ToolBar.UpdateActions()
+}
+
+func (ss *Sim) Stop() {
+	ss.StopNow = true
 }
 
 func (ss *Sim) Init() {
@@ -168,7 +191,7 @@ func (ss *Sim) ConfigWorldView(tg *etview.TensorGrid) {
 	}
 	tg.Disp.Defaults()
 	tg.Disp.ColorMap = giv.ColorMapName(cnm)
-	tg.Disp.GridFill = 0.9
+	tg.Disp.GridFill = 1
 	tg.SetStretchMax()
 }
 
@@ -203,103 +226,135 @@ func (ss *Sim) ConfigGui() *gi.Window {
 
 	tv := gi.AddNewTabView(split, "tv")
 
-	tg := tv.AddNewTab(etview.KiT_TensorGrid, "Trace").(*etview.TensorGrid)
-	ss.TraceView = tg
-	tg.SetTensor(ss.Trace)
-	ss.ConfigWorldView(tg)
+	sps := tv.AddNewTab(gi.KiT_SplitView, "State").(*gi.SplitView)
+	sps.Dim = mat32.Y
+	sps.SetStretchMax()
+
+	ss.StateView = etview.AddNewTableView(sps, "State")
+	ss.StateView.SetTable(ss.State, nil)
+
+	ss.TraceView = etview.AddNewTensorGrid(sps, "Trace", ss.Trace)
+	ss.ConfigWorldView(ss.TraceView)
+
+	sps.SetSplits(.3, .7)
 
 	wg := tv.AddNewTab(etview.KiT_TensorGrid, "World").(*etview.TensorGrid)
 	ss.WorldView = wg
 	wg.SetTensor(ss.World.World)
 	ss.ConfigWorldView(wg)
 
-	// ss.World.ViewImage = tv.AddNewTab(gi.KiT_Bitmap, "Image").(*gi.Bitmap)
-	// ss.World.ViewImage.SetStretchMax()
-
-	ss.StateView = tv.AddNewTab(etview.KiT_TableView, "State").(*etview.TableView)
-	ss.StateView.SetTable(ss.State, nil)
-
 	split.SetSplits(.3, .7)
 
-	tbar.AddAction(gi.ActOpts{Label: "Init", Icon: "reset", Tooltip: "Init env."}, win.This(),
-		func(recv, send ki.Ki, sig int64, data interface{}) {
-			ss.Init()
-			vp.SetFullReRender()
-		})
+	tbar.AddAction(gi.ActOpts{Label: "Init", Icon: "reset", Tooltip: "Init env.", UpdateFunc: func(act *gi.Action) {
+		act.SetActiveStateUpdt(!ss.IsRunning)
+	}}, win.This(), func(recv, send ki.Ki, sig int64, data interface{}) {
+		ss.Init()
+		vp.SetFullReRender()
+	})
 
-	tbar.AddAction(gi.ActOpts{Label: "Step", Icon: "step-fwd", Tooltip: "Step one auto-generated action"}, win.This(),
-		func(recv, send ki.Ki, sig int64, data interface{}) {
-			ss.StepAuto()
-			vp.SetFullReRender()
-		})
+	tbar.AddAction(gi.ActOpts{Label: "Step", Icon: "step-fwd", Tooltip: "Step one auto-generated action", UpdateFunc: func(act *gi.Action) {
+		act.SetActiveStateUpdt(!ss.IsRunning)
+	}}, win.This(), func(recv, send ki.Ki, sig int64, data interface{}) {
+		ss.StepAuto()
+		vp.SetFullReRender()
+	})
 
-	tbar.AddAction(gi.ActOpts{Label: "StepN", Icon: "forward", Tooltip: "Step N auto-generated actions"}, win.This(),
-		func(recv, send ki.Ki, sig int64, data interface{}) {
-			ss.StepAutoN()
-			vp.SetFullReRender()
-		})
+	tbar.AddAction(gi.ActOpts{Label: "StepN", Icon: "forward", Tooltip: "Step N auto-generated actions", UpdateFunc: func(act *gi.Action) {
+		act.SetActiveStateUpdt(!ss.IsRunning)
+	}}, win.This(), func(recv, send ki.Ki, sig int64, data interface{}) {
+		ss.StepAutoN()
+		vp.SetFullReRender()
+	})
 
 	tbar.AddSeparator("sep-step")
 
-	tbar.AddAction(gi.ActOpts{Label: "Left", Icon: "wedge-left", Tooltip: "Rotate Left"}, win.This(),
-		func(recv, send ki.Ki, sig int64, data interface{}) {
-			ss.Left()
-			vp.SetFullReRender()
-		})
+	tbar.AddAction(gi.ActOpts{Label: "Run", Icon: "play", Tooltip: "run until stop pressed", UpdateFunc: func(act *gi.Action) {
+		act.SetActiveStateUpdt(!ss.IsRunning)
+	}}, win.This(), func(recv, send ki.Ki, sig int64, data interface{}) {
+		go ss.Run()
+		tbar.UpdateActions()
+		vp.SetNeedsFullRender()
+	})
 
-	tbar.AddAction(gi.ActOpts{Label: "Right", Icon: "wedge-right", Tooltip: "Rotate Right"}, win.This(),
-		func(recv, send ki.Ki, sig int64, data interface{}) {
-			ss.Right()
-			vp.SetFullReRender()
-		})
+	tbar.AddAction(gi.ActOpts{Label: "Stop", Icon: "stop", Tooltip: "stop running", UpdateFunc: func(act *gi.Action) {
+		act.SetActiveStateUpdt(ss.IsRunning)
+	}}, win.This(), func(recv, send ki.Ki, sig int64, data interface{}) {
+		ss.Stop()
+		tbar.UpdateActions()
+		vp.SetNeedsFullRender()
+	})
 
-	tbar.AddAction(gi.ActOpts{Label: "Forward", Icon: "wedge-up", Tooltip: "Step Forward"}, win.This(),
-		func(recv, send ki.Ki, sig int64, data interface{}) {
-			ss.Forward()
-			vp.SetFullReRender()
-		})
+	tbar.AddSeparator("run-sep")
 
-	tbar.AddAction(gi.ActOpts{Label: "Backward", Icon: "wedge-down", Tooltip: "Step Backward"}, win.This(),
-		func(recv, send ki.Ki, sig int64, data interface{}) {
-			ss.Backward()
-			vp.SetFullReRender()
-		})
+	tbar.AddAction(gi.ActOpts{Label: "Left", Icon: "wedge-left", Tooltip: "Rotate Left", UpdateFunc: func(act *gi.Action) {
+		act.SetActiveStateUpdt(!ss.IsRunning)
+	}}, win.This(), func(recv, send ki.Ki, sig int64, data interface{}) {
+		ss.Left()
+		vp.SetFullReRender()
+	})
+
+	tbar.AddAction(gi.ActOpts{Label: "Right", Icon: "wedge-right", Tooltip: "Rotate Right", UpdateFunc: func(act *gi.Action) {
+		act.SetActiveStateUpdt(!ss.IsRunning)
+	}}, win.This(), func(recv, send ki.Ki, sig int64, data interface{}) {
+		ss.Right()
+		vp.SetFullReRender()
+	})
+
+	tbar.AddAction(gi.ActOpts{Label: "Forward", Icon: "wedge-up", Tooltip: "Step Forward", UpdateFunc: func(act *gi.Action) {
+		act.SetActiveStateUpdt(!ss.IsRunning)
+	}}, win.This(), func(recv, send ki.Ki, sig int64, data interface{}) {
+		ss.Forward()
+		vp.SetFullReRender()
+	})
+
+	tbar.AddAction(gi.ActOpts{Label: "Backward", Icon: "wedge-down", Tooltip: "Step Backward", UpdateFunc: func(act *gi.Action) {
+		act.SetActiveStateUpdt(!ss.IsRunning)
+	}}, win.This(), func(recv, send ki.Ki, sig int64, data interface{}) {
+		ss.Backward()
+		vp.SetFullReRender()
+	})
 
 	tbar.AddSeparator("sep-eat")
 
-	tbar.AddAction(gi.ActOpts{Label: "Eat", Icon: "field", Tooltip: "Eat food -- only if directly in front"}, win.This(),
-		func(recv, send ki.Ki, sig int64, data interface{}) {
-			ss.Eat()
-			vp.SetFullReRender()
-		})
+	tbar.AddAction(gi.ActOpts{Label: "Eat", Icon: "field", Tooltip: "Eat food -- only if directly in front", UpdateFunc: func(act *gi.Action) {
+		act.SetActiveStateUpdt(!ss.IsRunning)
+	}}, win.This(), func(recv, send ki.Ki, sig int64, data interface{}) {
+		ss.Eat()
+		vp.SetFullReRender()
+	})
 
-	tbar.AddAction(gi.ActOpts{Label: "Drink", Icon: "svg", Tooltip: "Drink water -- only if directly in front"}, win.This(),
-		func(recv, send ki.Ki, sig int64, data interface{}) {
-			ss.Drink()
-			vp.SetFullReRender()
-		})
+	tbar.AddAction(gi.ActOpts{Label: "Drink", Icon: "svg", Tooltip: "Drink water -- only if directly in front", UpdateFunc: func(act *gi.Action) {
+		act.SetActiveStateUpdt(!ss.IsRunning)
+	}}, win.This(), func(recv, send ki.Ki, sig int64, data interface{}) {
+		ss.Drink()
+		vp.SetFullReRender()
+	})
 
 	tbar.AddSeparator("sep-file")
 
-	tbar.AddAction(gi.ActOpts{Label: "Open World", Icon: "file-open", Tooltip: "Open World from .tsv file"}, win.This(),
-		func(recv, send ki.Ki, sig int64, data interface{}) {
-			giv.CallMethod(&ss.World, "OpenWorld", vp)
-		})
+	tbar.AddAction(gi.ActOpts{Label: "Open World", Icon: "file-open", Tooltip: "Open World from .tsv file", UpdateFunc: func(act *gi.Action) {
+		act.SetActiveStateUpdt(!ss.IsRunning)
+	}}, win.This(), func(recv, send ki.Ki, sig int64, data interface{}) {
+		giv.CallMethod(&ss.World, "OpenWorld", vp)
+	})
 
-	tbar.AddAction(gi.ActOpts{Label: "Save World", Icon: "file-save", Tooltip: "Save World to .tsv file"}, win.This(),
-		func(recv, send ki.Ki, sig int64, data interface{}) {
-			giv.CallMethod(&ss.World, "SaveWorld", vp)
-		})
+	tbar.AddAction(gi.ActOpts{Label: "Save World", Icon: "file-save", Tooltip: "Save World to .tsv file", UpdateFunc: func(act *gi.Action) {
+		act.SetActiveStateUpdt(!ss.IsRunning)
+	}}, win.This(), func(recv, send ki.Ki, sig int64, data interface{}) {
+		giv.CallMethod(&ss.World, "SaveWorld", vp)
+	})
 
-	tbar.AddAction(gi.ActOpts{Label: "Open Pats", Icon: "file-open", Tooltip: "Open bit patterns from .json file"}, win.This(),
-		func(recv, send ki.Ki, sig int64, data interface{}) {
-			giv.CallMethod(&ss.World, "OpenPats", vp)
-		})
+	tbar.AddAction(gi.ActOpts{Label: "Open Pats", Icon: "file-open", Tooltip: "Open bit patterns from .json file", UpdateFunc: func(act *gi.Action) {
+		act.SetActiveStateUpdt(!ss.IsRunning)
+	}}, win.This(), func(recv, send ki.Ki, sig int64, data interface{}) {
+		giv.CallMethod(&ss.World, "OpenPats", vp)
+	})
 
-	tbar.AddAction(gi.ActOpts{Label: "Save Pats", Icon: "file-save", Tooltip: "Save bit patterns to .json file"}, win.This(),
-		func(recv, send ki.Ki, sig int64, data interface{}) {
-			giv.CallMethod(&ss.World, "SavePats", vp)
-		})
+	tbar.AddAction(gi.ActOpts{Label: "Save Pats", Icon: "file-save", Tooltip: "Save bit patterns to .json file", UpdateFunc: func(act *gi.Action) {
+		act.SetActiveStateUpdt(!ss.IsRunning)
+	}}, win.This(), func(recv, send ki.Ki, sig int64, data interface{}) {
+		giv.CallMethod(&ss.World, "SavePats", vp)
+	})
 
 	vp.UpdateEndNoSig(updt)
 
