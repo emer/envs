@@ -44,6 +44,7 @@ type Sim struct {
 	StateView *etview.TableView  `view:"-" desc:"the main view"`
 	Win       *gi.Window         `view:"-" desc:"main GUI window"`
 	ToolBar   *gi.ToolBar        `view:"-" desc:"the master toolbar"`
+	TabView   *gi.TabView        `view:"-" desc:"the tab view"`
 	MatColors []string           `desc:"color strings in material order"`
 	StopNow   bool               `view:"-" desc:"flag to stop running"`
 	IsRunning bool               `view:"-" desc:"true when running"`
@@ -79,9 +80,11 @@ func (ss *Sim) Config() {
 }
 
 func (ss *Sim) UpdtViews() {
-	ss.TraceView.UpdateSig()
-	ss.WorldView.UpdateSig()
+	updt := ss.TabView.UpdateStart()
+	// ss.TraceView.UpdateSig()
+	// ss.WorldView.UpdateSig()
 	ss.StateView.UpdateTable()
+	ss.TabView.UpdateEnd(updt)
 }
 
 // Step takes one step and records in table
@@ -122,7 +125,7 @@ func (ss *Sim) Run() {
 	for !ss.StopNow {
 		ss.Win.Viewport.SetFullReRender()
 		ss.StepAuto()
-		ss.Win.PollEvents()
+		ss.Win.PollEvents() // needed when not running in parallel.
 	}
 	ss.IsRunning = false
 	ss.StopNow = false
@@ -225,6 +228,7 @@ func (ss *Sim) ConfigGui() *gi.Window {
 	sv.SetStruct(&ss.World)
 
 	tv := gi.AddNewTabView(split, "tv")
+	ss.TabView = tv
 
 	sps := tv.AddNewTab(gi.KiT_SplitView, "State").(*gi.SplitView)
 	sps.Dim = mat32.Y
@@ -271,7 +275,7 @@ func (ss *Sim) ConfigGui() *gi.Window {
 	tbar.AddAction(gi.ActOpts{Label: "Run", Icon: "play", Tooltip: "run until stop pressed", UpdateFunc: func(act *gi.Action) {
 		act.SetActiveStateUpdt(!ss.IsRunning)
 	}}, win.This(), func(recv, send ki.Ki, sig int64, data interface{}) {
-		go ss.Run()
+		ss.Run() // go run is too crashy -- hangs or crashes.  re-enable to debug
 		tbar.UpdateActions()
 		vp.SetNeedsFullRender()
 	})

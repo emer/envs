@@ -36,3 +36,4 @@ This environment thus supports a rich, extensible, ecologically-based framework 
 
 * The depth view scanner can see through non-H/V lines sometimes, if there is a "thin" diagonal aligned just so along its track.  use double-thick diagonal lines to be safe.
 
+
