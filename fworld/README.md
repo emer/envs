@@ -6,7 +6,7 @@ The framework is basically grid world / minecraft style in 2D: there is a large 
 
 When front adjacent cell is "food" and agent executes the "eat" action, food reward US is activated, and likewise for drink and water.  Cells could also have a "cover" such that "dig" needs to be executed, after which point food or water would be revealed, etc.
 
-The agent is represented with a cell position and angle orientation, rodent-style without separate head or eye degrees of freedom, but with primate-style forward-looking view (different options can be added later, including full rodent 360 deg with two side-facing eyes, etc).  
+The agent is represented with a cell position and angle orientation, rodent-style without separate head or eye degrees of freedom, but with cat / primate-style forward-looking view (different options can be added later, including full rodent 360 deg with two side-facing eyes, etc).  
 
 The first-person sensory state for the agent consists of:
 
