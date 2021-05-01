@@ -18,26 +18,36 @@ import (
 	"github.com/emer/emergent/env"
 	"github.com/emer/emergent/erand"
 	"github.com/emer/etable/etensor"
+	"github.com/emer/etable/minmax"
 	"github.com/goki/gi/gi"
+	"github.com/goki/mat32"
+	"golang.org/x/image/draw"
+	"golang.org/x/image/math/f64"
 )
 
 // ImagesEnv provides the rendered results of the Obj3D + Saccade generator.
 type ImagesEnv struct {
-	Nm     string  `desc:"name of this environment"`
-	Dsc    string  `desc:"description of this environment"`
-	Test   bool    `desc:"present test items, else train"`
-	Images Images  `desc:"images list"`
-	V1m16  Vis     `desc:"v1 16deg medium resolution filtering of image -- V1AllTsr has result"`
-	V1h16  Vis     `desc:"v1 16deg higher resolution filtering of image -- V1AllTsr has result"`
-	V1m8   Vis     `desc:"v1 8deg medium resolution filtering of image -- V1AllTsr has result"`
-	V1h8   Vis     `desc:"v1 8deg higher resolution filtering of image -- V1AllTsr has result"`
-	Order  []int   `desc:"order of images to present"`
-	Run    env.Ctr `view:"inline" desc:"current run of model as provided during Init"`
-	Epoch  env.Ctr `view:"inline" desc:"arbitrary aggregation of trials, for stats etc"`
-	Trial  env.Ctr `view:"inline" desc:"each object trajectory is one trial"`
-	Row    env.Ctr `view:"inline" desc:"row of item list  -- this is actual counter driving everything"`
-	CurCat string  `desc:"current category"`
-	CurImg string  `desc:"current image"`
+	Nm         string     `desc:"name of this environment"`
+	Dsc        string     `desc:"description of this environment"`
+	Test       bool       `desc:"present test items, else train"`
+	Images     Images     `desc:"images list"`
+	TransMax   mat32.Vec2 `desc:"def 0.3 maximum amount of translation as proportion of half-width size in each direction -- 1 = something in center is now at right edge"`
+	ScaleRange minmax.F32 `desc:"def 0.5 - 1.1 range of scale"`
+	RotateMax  float32    `def:"8" desc:"def 8 maximum degrees of rotation in plane -- image is rotated plus or minus in this range"`
+	V1m16      Vis        `desc:"v1 16deg medium resolution filtering of image -- V1AllTsr has result"`
+	V1h16      Vis        `desc:"v1 16deg higher resolution filtering of image -- V1AllTsr has result"`
+	V1m8       Vis        `desc:"v1 8deg medium resolution filtering of image -- V1AllTsr has result"`
+	V1h8       Vis        `desc:"v1 8deg higher resolution filtering of image -- V1AllTsr has result"`
+	Order      []int      `desc:"order of images to present"`
+	Run        env.Ctr    `view:"inline" desc:"current run of model as provided during Init"`
+	Epoch      env.Ctr    `view:"inline" desc:"arbitrary aggregation of trials, for stats etc"`
+	Trial      env.Ctr    `view:"inline" desc:"each object trajectory is one trial"`
+	Row        env.Ctr    `view:"inline" desc:"row of item list  -- this is actual counter driving everything"`
+	CurCat     string     `desc:"current category"`
+	CurImg     string     `desc:"current image"`
+	CurTrans   mat32.Vec2 `desc:"current translation"`
+	CurScale   float32    `desc:"current scaling"`
+	CurRot     float32    `desc:"current rotation"`
 
 	Image image.Image `view:"-" desc:"rendered image as loaded"`
 }
@@ -50,6 +60,9 @@ func (ev *ImagesEnv) Validate() error {
 }
 
 func (ev *ImagesEnv) Defaults() {
+	ev.TransMax.Set(0.3, 0.3)
+	ev.ScaleRange.Set(0.4, 1.0)
+	ev.RotateMax = 8
 	ev.V1m16.Defaults(24, 8)
 	ev.V1h16.Defaults(12, 4)
 	ev.V1m8.Defaults(12, 4)
@@ -188,6 +201,30 @@ func (ev *ImagesEnv) OpenImage() error {
 	return err
 }
 
+// TransformImage transforms the image according to random translation and scaling
+func (ev *ImagesEnv) TransformImage() {
+	ev.CurTrans.X = (rand.Float32()*2 - 1) * ev.TransMax.X
+	ev.CurTrans.Y = (rand.Float32()*2 - 1) * ev.TransMax.Y
+	ev.CurScale = ev.ScaleRange.Min + ev.ScaleRange.Range()*rand.Float32()
+	ev.CurRot = (rand.Float32()*2 - 1) * ev.RotateMax
+
+	s := ev.Image.Bounds().Size()
+	transformer := draw.BiLinear
+	tx := 0.5 * ev.CurTrans.X * float32(s.X)
+	ty := 0.5 * ev.CurTrans.Y * float32(s.Y)
+	m := mat32.Translate2D(tx, ty).Scale(ev.CurScale, ev.CurScale).Rotate(mat32.DegToRad(ev.CurRot))
+	s2d := f64.Aff3{float64(m.XX), float64(m.XY), float64(m.X0), float64(m.YX), float64(m.YY), float64(m.Y0)}
+
+	// use first color in upper left as fill color
+	clr := ev.Image.At(0, 0)
+	dst := image.NewRGBA(ev.Image.Bounds())
+	src := image.NewUniform(clr)
+	draw.Draw(dst, dst.Bounds(), src, image.ZP, draw.Src)
+
+	transformer.Transform(dst, s2d, ev.Image, ev.Image.Bounds(), draw.Over, nil) // Over superimposes over bg
+	ev.Image = dst
+}
+
 // FilterImage opens and filters current image
 func (ev *ImagesEnv) FilterImage() error {
 	err := ev.OpenImage()
@@ -195,8 +232,7 @@ func (ev *ImagesEnv) FilterImage() error {
 		fmt.Println(err)
 		return err
 	}
-	// todo: transform image
-	// resize once for both..
+	ev.TransformImage()
 	tsz := ev.V1m16.ImgSize
 	isz := ev.Image.Bounds().Size()
 	if isz != tsz {
