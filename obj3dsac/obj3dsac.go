@@ -77,7 +77,8 @@ type Obj3DSac struct {
 
 func (ob *Obj3DSac) Defaults() {
 	hdir, _ := os.UserHomeDir()
-	path := filepath.Join(hdir, "ccn_images/CU3D_100_plus_models_obj") // downloadable from TODO
+	// see README.md for download info
+	path := filepath.Join(hdir, "ccn_images/CU3D_100_plus_models_obj")
 	ob.Objs.Path = path
 	ob.Objs.NTestPerCat = 2
 	ob.Objs.OpenCatProps("cu3d_obj_cat_props.csv")
