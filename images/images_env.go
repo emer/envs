@@ -27,27 +27,29 @@ import (
 
 // ImagesEnv provides the rendered results of the Obj3D + Saccade generator.
 type ImagesEnv struct {
-	Nm         string     `desc:"name of this environment"`
-	Dsc        string     `desc:"description of this environment"`
-	Test       bool       `desc:"present test items, else train"`
-	Images     Images     `desc:"images list"`
-	TransMax   mat32.Vec2 `desc:"def 0.3 maximum amount of translation as proportion of half-width size in each direction -- 1 = something in center is now at right edge"`
-	ScaleRange minmax.F32 `desc:"def 0.5 - 1.1 range of scale"`
-	RotateMax  float32    `def:"8" desc:"def 8 maximum degrees of rotation in plane -- image is rotated plus or minus in this range"`
-	V1m16      Vis        `desc:"v1 16deg medium resolution filtering of image -- V1AllTsr has result"`
-	V1h16      Vis        `desc:"v1 16deg higher resolution filtering of image -- V1AllTsr has result"`
-	V1m8       Vis        `desc:"v1 8deg medium resolution filtering of image -- V1AllTsr has result"`
-	V1h8       Vis        `desc:"v1 8deg higher resolution filtering of image -- V1AllTsr has result"`
-	Order      []int      `desc:"order of images to present"`
-	Run        env.Ctr    `view:"inline" desc:"current run of model as provided during Init"`
-	Epoch      env.Ctr    `view:"inline" desc:"arbitrary aggregation of trials, for stats etc"`
-	Trial      env.Ctr    `view:"inline" desc:"each object trajectory is one trial"`
-	Row        env.Ctr    `view:"inline" desc:"row of item list  -- this is actual counter driving everything"`
-	CurCat     string     `desc:"current category"`
-	CurImg     string     `desc:"current image"`
-	CurTrans   mat32.Vec2 `desc:"current translation"`
-	CurScale   float32    `desc:"current scaling"`
-	CurRot     float32    `desc:"current rotation"`
+	Nm         string          `desc:"name of this environment"`
+	Dsc        string          `desc:"description of this environment"`
+	Test       bool            `desc:"present test items, else train"`
+	Images     Images          `desc:"images list"`
+	TransMax   mat32.Vec2      `desc:"def 0.3 maximum amount of translation as proportion of half-width size in each direction -- 1 = something in center is now at right edge"`
+	ScaleRange minmax.F32      `desc:"def 0.5 - 1.1 range of scale"`
+	RotateMax  float32         `def:"8" desc:"def 8 maximum degrees of rotation in plane -- image is rotated plus or minus in this range"`
+	V1m16      Vis             `desc:"v1 16deg medium resolution filtering of image -- V1AllTsr has result"`
+	V1h16      Vis             `desc:"v1 16deg higher resolution filtering of image -- V1AllTsr has result"`
+	V1m8       Vis             `desc:"v1 8deg medium resolution filtering of image -- V1AllTsr has result"`
+	V1h8       Vis             `desc:"v1 8deg higher resolution filtering of image -- V1AllTsr has result"`
+	Output     etensor.Float32 `desc:"output category"`
+	Order      []int           `desc:"order of images to present"`
+	Run        env.Ctr         `view:"inline" desc:"current run of model as provided during Init"`
+	Epoch      env.Ctr         `view:"inline" desc:"arbitrary aggregation of trials, for stats etc"`
+	Trial      env.Ctr         `view:"inline" desc:"each object trajectory is one trial"`
+	Row        env.Ctr         `view:"inline" desc:"row of item list  -- this is actual counter driving everything"`
+	CurCat     string          `desc:"current category"`
+	CurCatIdx  int             `desc:"index of current category"`
+	CurImg     string          `desc:"current image"`
+	CurTrans   mat32.Vec2      `desc:"current translation"`
+	CurScale   float32         `desc:"current scaling"`
+	CurRot     float32         `desc:"current rotation"`
 
 	Image image.Image `view:"-" desc:"rendered image as loaded"`
 }
@@ -91,6 +93,7 @@ func (ev *ImagesEnv) Init(run int) {
 	ev.Row.Cur = -1 // init state -- key so that first Step() = 0
 	ev.Row.Max = len(ev.ImageList())
 	ev.Order = rand.Perm(ev.Row.Max)
+	ev.Output.SetShape([]int{len(ev.Images.Cats)}, nil, nil)
 }
 
 // SaveListJSON saves flat string list to a JSON-formatted file.
@@ -151,6 +154,7 @@ func (ev *ImagesEnv) OpenConfig() bool {
 		OpenListJSON(&ev.Images.Cats, cfnm)
 		OpenList2JSON(&ev.Images.ImagesTest, tsfnm)
 		OpenList2JSON(&ev.Images.ImagesTrain, trfnm)
+		ev.Images.ToTrainAll()
 		ev.Images.Flats()
 		return true
 	}
@@ -186,6 +190,7 @@ func (ev *ImagesEnv) CurImage() string {
 	i := ev.Order[r]
 	ev.CurImg = il[i]
 	ev.CurCat = ev.Images.Cat(ev.CurImg)
+	ev.CurCatIdx = ev.Images.CatMap[ev.CurCat]
 	return ev.CurImg
 }
 
@@ -245,6 +250,12 @@ func (ev *ImagesEnv) FilterImage() error {
 	return nil
 }
 
+// SetOutput sets output by category
+func (ev *ImagesEnv) SetOutput() {
+	ev.Output.SetZeros()
+	ev.Output.Set1D(ev.CurCatIdx, 1)
+}
+
 func (ev *ImagesEnv) String() string {
 	return fmt.Sprintf("%s:%s_%d", ev.CurCat, ev.CurImage, ev.Trial.Cur)
 }
@@ -256,6 +267,7 @@ func (ev *ImagesEnv) Step() bool {
 		ev.Epoch.Incr()
 	}
 	ev.FilterImage()
+	ev.SetOutput()
 	return true
 }
 
@@ -281,6 +293,8 @@ func (ev *ImagesEnv) State(element string) etensor.Tensor {
 		return &ev.V1m8.V1AllTsr
 	case "V1h8":
 		return &ev.V1h8.V1AllTsr
+	case "Output":
+		return &ev.Output
 	}
 	return nil
 }

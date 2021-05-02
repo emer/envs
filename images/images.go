@@ -18,25 +18,31 @@ import (
 // Images implements management of lists of image files,
 // with category names or organized in directories by category.
 type Images struct {
-	Path        string     `desc:"path to image files -- this should point to a directory that has files or subdirectories that then have image files in them"`
-	Exts        []string   `desc:"extensions of image files to find (lowercase)"`
-	CatSep      string     `desc:"separator in file name for category label -- if empty then must have subdirs"`
-	SplitByItm  bool       `desc:"split by item -- each file name has an item label after CatSep"`
-	NTestPerCat int        `desc:"number of testing images per category -- if SplitByItem images are split by item id"`
-	Cats        []string   `desc:"list of image categories"`
-	ImagesAll   [][]string `desc:"full list of images, organized by category (directory) and then filename"`
-	ImagesTrain [][]string `desc:"list of training images, organized by category (directory) and then filename"`
-	ImagesTest  [][]string `desc:"list of testing images, organized by category (directory) and then filename"`
-	FlatAll     []string   `desc:"flat list of all images, as cat/filename.ext -- Flats() makes from above"`
-	FlatTrain   []string   `desc:"flat list of all training images, as cat/filename.ext -- Flats() makes from above"`
-	FlatTest    []string   `desc:"flat list of all testing images, as cat/filename.ext -- Flats() makes from above"`
+	Path        string         `desc:"path to image files -- this should point to a directory that has files or subdirectories that then have image files in them"`
+	Exts        []string       `desc:"extensions of image files to find (lowercase)"`
+	CatSep      string         `desc:"separator in file name for category label -- if empty then must have subdirs"`
+	SplitByItm  bool           `desc:"split by item -- each file name has an item label after CatSep"`
+	NTestPerCat int            `desc:"number of testing images per category -- if SplitByItem images are split by item id"`
+	Cats        []string       `desc:"list of image categories"`
+	CatMap      map[string]int `desc:"map of categories to indexes in Cats list"`
+	ImagesAll   [][]string     `desc:"full list of images, organized by category (directory) and then filename"`
+	ImagesTrain [][]string     `desc:"list of training images, organized by category (directory) and then filename"`
+	ImagesTest  [][]string     `desc:"list of testing images, organized by category (directory) and then filename"`
+	FlatAll     []string       `desc:"flat list of all images, as cat/filename.ext -- Flats() makes from above"`
+	FlatTrain   []string       `desc:"flat list of all training images, as cat/filename.ext -- Flats() makes from above"`
+	FlatTest    []string       `desc:"flat list of all testing images, as cat/filename.ext -- Flats() makes from above"`
 }
 
-// OpenPath opens list of images at given path, with given extensions
-func (im *Images) OpenPath(path string, exts []string, catsep string) error {
+// SetPath sets path, with given extensions, and separator
+func (im *Images) SetPath(path string, exts []string, catsep string) {
 	im.Path = path
 	im.Exts = exts
 	im.CatSep = catsep
+}
+
+// OpenPath opens list of images at given path, with given extensions, and separator
+func (im *Images) OpenPath(path string, exts []string, catsep string) error {
+	im.SetPath(path, exts, catsep)
 	if im.CatSep == "" {
 		return im.OpenDirs()
 	}
@@ -64,8 +70,17 @@ func (im *Images) OpenDirs() error {
 		}
 		im.ImagesAll[ci] = fls
 	}
+	im.MakeCatMap()
 	im.Split()
 	return nil
+}
+
+func (im *Images) MakeCatMap() {
+	nc := len(im.Cats)
+	im.CatMap = make(map[string]int, nc)
+	for ci, c := range im.Cats {
+		im.CatMap[c] = ci
+	}
 }
 
 func (im *Images) Cat(f string) string {
@@ -110,6 +125,7 @@ func (im *Images) OpenNames() error {
 	}
 	im.Cats = append(im.Cats, curcat)
 	im.ImagesAll = append(im.ImagesAll, fls[si:len(fls)])
+	im.MakeCatMap()
 	im.Split()
 	return nil
 }
@@ -207,6 +223,7 @@ func (im *Images) SelectCats(cats []string) {
 			im.ImagesTest = append(im.ImagesTest[:ci], im.ImagesTest[ci+1:]...)
 		}
 	}
+	im.MakeCatMap()
 	im.Flats()
 }
 
@@ -230,6 +247,7 @@ func (im *Images) DeleteCats(cats []string) {
 			im.ImagesTest = append(im.ImagesTest[:ci], im.ImagesTest[ci+1:]...)
 		}
 	}
+	im.MakeCatMap()
 	im.Flats()
 }
 
@@ -299,4 +317,42 @@ func (im *Images) FlatImpl(images [][]string) []string {
 		}
 	}
 	return flat
+}
+
+// UnFlat translates FlatTrain, FlatTest into full nested lists -- Cats must
+// also have already been loaded.  Call after loading FlatTrain, FlatTest
+func (im *Images) UnFlat() {
+	nc := len(im.Cats)
+	im.ImagesAll = make([][]string, nc)
+	im.ImagesTrain = make([][]string, nc)
+	im.ImagesTest = make([][]string, nc)
+
+	im.MakeCatMap()
+
+	for _, fn := range im.FlatTrain {
+		cat := im.Cat(fn)
+		ci := im.CatMap[cat]
+		im.ImagesTrain[ci] = append(im.ImagesTrain[ci], fn)
+		im.ImagesAll[ci] = append(im.ImagesAll[ci], fn)
+	}
+	for _, fn := range im.FlatTest {
+		cat := im.Cat(fn)
+		ci := im.CatMap[cat]
+		im.ImagesTest[ci] = append(im.ImagesTest[ci], fn)
+		im.ImagesAll[ci] = append(im.ImagesAll[ci], fn)
+	}
+	im.FlatAll = im.FlatImpl(im.ImagesAll)
+}
+
+// ToTrainAll compiles TrainAll from ImagesTrain, ImagesTest
+func (im *Images) ToTrainAll() {
+	nc := len(im.Cats)
+	im.ImagesAll = make([][]string, nc)
+
+	for ci, fl := range im.ImagesTrain {
+		im.ImagesAll[ci] = append(im.ImagesAll[ci], fl...)
+	}
+	for ci, fl := range im.ImagesTest {
+		im.ImagesAll[ci] = append(im.ImagesAll[ci], fl...)
+	}
 }

@@ -50,9 +50,14 @@ func (ss *Sim) Config() {
 	// see README.md for download info
 	path := filepath.Join(hdir, "ccn_images/CU3D_100_plus_renders")
 	ss.Images.Defaults()
+	ss.Images.Nm = "cu3d100plus"
 	ss.Images.Images.NTestPerCat = 2
 	ss.Images.Images.SplitByItm = true
+	// switch the next two lines to use saved splits
+	// ss.Images.Images.SetPath(path, []string{".png"}, "_")
+	// ss.Images.OpenConfig()
 	ss.Images.Images.OpenPath(path, []string{".png"}, "_")
+	ss.Images.SaveConfig()
 	ss.Images.Init(0)
 	ss.Images.Step()
 }
