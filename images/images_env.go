@@ -257,7 +257,7 @@ func (ev *ImagesEnv) SetOutput() {
 }
 
 func (ev *ImagesEnv) String() string {
-	return fmt.Sprintf("%s:%s_%d", ev.CurCat, ev.CurImage, ev.Trial.Cur)
+	return fmt.Sprintf("%s:%s_%d", ev.CurCat, ev.CurImg, ev.Trial.Cur)
 }
 
 func (ev *ImagesEnv) Step() bool {
