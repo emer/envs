@@ -121,6 +121,12 @@ func (ss *Sim) ConfigGui() *gi.Window {
 		vp.SetNeedsFullRender()
 	})
 
+	tbar.AddAction(gi.ActOpts{Label: "XForm", Icon: "step-fwd", Tooltip: "transform image according to current settings"}, win.This(), func(recv, send ki.Ki, sig int64, data interface{}) {
+		ss.Images.FilterImage()
+		bimg.SetImage(ss.Images.Image, 1024, 1024)
+		vp.SetNeedsFullRender()
+	})
+
 	vp.UpdateEndNoSig(updt)
 
 	// main menu
