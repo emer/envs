@@ -177,6 +177,7 @@ func (ev *ImagesEnv) OpenConfig() bool {
 		OpenListJSON(&ev.Images.Cats, cfnm)
 		OpenList2JSON(&ev.Images.ImagesTest, tsfnm)
 		OpenList2JSON(&ev.Images.ImagesTrain, trfnm)
+		ev.Images.ToTrainAll()
 		ev.Images.Flats()
 		return true
 	}

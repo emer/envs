@@ -42,10 +42,10 @@ type Obj3DSacEnv struct {
 	CurObj    string          `desc:"current object"`
 
 	// user can set the 2D shapes of these tensors -- Defaults sets default shapes
-	EyePos  etensor.Float32 `view:"eye position popcode"`
-	SacPlan etensor.Float32 `view:"saccade plan popcode"`
-	Saccade etensor.Float32 `view:"saccade popcode "`
-	ObjVel  etensor.Float32 `view:"object velocity"`
+	EyePos  etensor.Float32 `desc:"eye position popcode"`
+	SacPlan etensor.Float32 `desc:"saccade plan popcode"`
+	Saccade etensor.Float32 `desc:"saccade popcode "`
+	ObjVel  etensor.Float32 `desc:"object velocity"`
 
 	Image image.Image `view:"-" desc:"rendered image as loaded"`
 }
