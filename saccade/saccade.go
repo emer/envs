@@ -26,6 +26,7 @@ import (
 type Saccade struct {
 	TrajLenRange minmax.Int `desc:"range of trajectory lengths (time steps)"`
 	FixDurRange  minmax.Int `desc:"range of fixation durations"`
+	RandObjPos   bool       `desc:"if true, randomize the object position at start of every trajectory -- this can be confusing for prediction however"`
 	SacGenMax    float32    `desc:"maximum saccade size"`
 	VelGenMax    float32    `desc:"maximum object velocity"`
 	ZeroVelP     float64    `desc:"probability of zero velocity object motion as a discrete option prior to computing random velocity"`
@@ -38,6 +39,8 @@ type Saccade struct {
 	// State below here
 	Table       *etable.Table    `desc:"table showing visualization of state"`
 	WorldTsr    *etensor.Float32 `inactive:"+" desc:"tensor state showing world position of obj"`
+	EyePosTsr   *etensor.Float32 `inactive:"+" desc:"tensor state showing eye position"`
+	SacPlanTsr  *etensor.Float32 `inactive:"+" desc:"tensor state showing saccade plan"`
 	ViewTsr     *etensor.Float32 `inactive:"+" desc:"tensor state showing view position of obj"`
 	TrajLen     int              `inactive:"+" desc:"current trajectory length"`
 	FixDur      int              `inactive:"+" desc:"current fixation duration"`
@@ -62,6 +65,7 @@ type Saccade struct {
 func (sc *Saccade) Defaults() {
 	sc.TrajLenRange.Set(4, 4)
 	sc.FixDurRange.Set(2, 2)
+	sc.RandObjPos = false
 	sc.SacGenMax = 0.4
 	sc.VelGenMax = 0.4
 	sc.ZeroVelP = 0
@@ -82,6 +86,8 @@ func (sc *Saccade) Init() {
 		sc.ConfigTable(sc.Table)
 		yx := []string{"Y", "X"}
 		sc.WorldTsr = etensor.NewFloat32([]int{sc.WorldVisSz.Y, sc.WorldVisSz.X}, nil, yx)
+		sc.EyePosTsr = etensor.NewFloat32([]int{sc.WorldVisSz.Y, sc.WorldVisSz.X}, nil, yx)
+		sc.SacPlanTsr = etensor.NewFloat32([]int{sc.WorldVisSz.Y, sc.WorldVisSz.X}, nil, yx)
 		sc.ViewTsr = etensor.NewFloat32([]int{sc.ViewVisSz.Y, sc.ViewVisSz.X}, nil, yx)
 	}
 	sc.Table.SetNumRows(1)
@@ -101,6 +107,8 @@ func (sc *Saccade) ConfigTable(dt *etable.Table) {
 		{"Tick", etensor.INT64, nil, nil},
 		{"SacTick", etensor.INT64, nil, nil},
 		{"World", etensor.FLOAT32, []int{sc.WorldVisSz.Y, sc.WorldVisSz.X}, yx},
+		{"Eye", etensor.FLOAT32, []int{sc.WorldVisSz.Y, sc.WorldVisSz.X}, yx},
+		{"Plan", etensor.FLOAT32, []int{sc.WorldVisSz.Y, sc.WorldVisSz.X}, yx},
 		{"View", etensor.FLOAT32, []int{sc.ViewVisSz.Y, sc.ViewVisSz.X}, yx},
 		{"ObjPos", etensor.FLOAT32, []int{2}, nil},
 		{"ObjViewPos", etensor.FLOAT32, []int{2}, nil},
@@ -146,7 +154,29 @@ func (sc *Saccade) WriteToTable(dt *etable.Table) {
 		log.Printf("Saccade: View index invalid: %v\n", idx)
 	}
 
+	sc.EyePosTsr.SetZeros()
+	opx = int(math.Floor(float64(0.5 * (sc.EyePos.X + 1) * float32(sc.WorldVisSz.X))))
+	opy = int(math.Floor(float64(0.5 * (sc.EyePos.Y + 1) * float32(sc.WorldVisSz.Y))))
+	idx = []int{opy, opx}
+	if sc.EyePosTsr.IdxIsValid(idx) {
+		sc.EyePosTsr.SetFloat(idx, 1)
+	} else {
+		log.Printf("Saccade: EyePos index invalid: %v\n", idx)
+	}
+
+	sc.SacPlanTsr.SetZeros()
+	opx = int(math.Floor(float64(0.5 * (sc.SacPlan.X + 1) * float32(sc.WorldVisSz.X))))
+	opy = int(math.Floor(float64(0.5 * (sc.SacPlan.Y + 1) * float32(sc.WorldVisSz.Y))))
+	idx = []int{opy, opx}
+	if sc.SacPlanTsr.IdxIsValid(idx) {
+		sc.SacPlanTsr.SetFloat(idx, 1)
+	} else {
+		log.Printf("Saccade: SacPlan index invalid: %v\n", idx)
+	}
+
 	dt.SetCellTensor("World", row, sc.WorldTsr)
+	dt.SetCellTensor("Eye", row, sc.EyePosTsr)
+	dt.SetCellTensor("Plan", row, sc.SacPlanTsr)
 	dt.SetCellTensor("View", row, sc.ViewTsr)
 
 	dt.SetCellTensorFloat1D("ObjPos", row, 0, float64(sc.ObjPos.X))
@@ -222,12 +252,15 @@ func (sc *Saccade) LimitSac(sacDev, start, objPos, objVel, trials float32) float
 	return sacDev
 }
 
-// NextTraj computes the next object position and trajectory, at start of a
+// NextTraj computes the next object position and trajectory, at start of a new object sequence
 func (sc *Saccade) NextTraj() {
 	sc.TrajLen = sc.TrajLenRange.Min + rand.Intn(sc.TrajLenRange.Range()+1)
 	zeroVel := erand.BoolProb(sc.ZeroVelP, -1)
-	sc.ObjPosNext.X = sc.World.Min + rand.Float32()*sc.World.Range()
-	sc.ObjPosNext.Y = sc.World.Min + rand.Float32()*sc.World.Range()
+	if sc.RandObjPos {
+		// note: resetting object position disrupts predictability..
+		sc.ObjPosNext.X = sc.World.Min + rand.Float32()*sc.World.Range()
+		sc.ObjPosNext.Y = sc.World.Min + rand.Float32()*sc.World.Range()
+	}
 	if zeroVel {
 		sc.ObjVelNext.SetZero()
 	} else {
@@ -236,10 +269,14 @@ func (sc *Saccade) NextTraj() {
 		sc.ObjVelNext.X = sc.LimitVel(sc.ObjVelNext.X, sc.ObjPosNext.X, float32(sc.TrajLen))
 		sc.ObjVelNext.Y = sc.LimitVel(sc.ObjVelNext.Y, sc.ObjPosNext.Y, float32(sc.TrajLen))
 	}
+	if sc.RandObjPos {
+		sc.SacPlan = sc.ObjPosNext.Sub(sc.EyePos)
+	} else {
+		sc.ObjPosNext = sc.ObjPos.Add(sc.ObjVelNext)
+		sc.SacPlan = sc.ObjPosNext.Sub(sc.EyePos)
+	}
 	// saccade directly to position of new object at start -- set duration too
 	sc.FixDur = sc.FixDurRange.Min + rand.Intn(sc.FixDurRange.Range()+1)
-	sc.SacPlan.X = sc.ObjPosNext.X - sc.EyePos.X
-	sc.SacPlan.Y = sc.ObjPosNext.Y - sc.EyePos.Y
 	sc.SacTick.Cur = sc.SacTick.Max - 1 // ensure that we saccade next time
 	sc.NewTrajNext = true
 }
