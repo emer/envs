@@ -55,7 +55,6 @@ var TheSim Sim
 
 // Config configures all the elements using the standard functions
 func (ss *Sim) Config() {
-	// order: Empty, wall, food, water
 	ss.MatColors = []string{"lightgrey", "black", "orange", "blue", "brown", "navy"}
 
 	ss.StepN = 10
@@ -66,12 +65,8 @@ func (ss *Sim) Config() {
 
 	sch := etable.Schema{
 		{"TrialName", etensor.STRING, nil, nil},
-		{"Depth", etensor.FLOAT32, ss.World.CurStates["Depth"].Shape.Shp, nil},
-		{"FovDepth", etensor.FLOAT32, ss.World.CurStates["FovDepth"].Shape.Shp, nil},
-		{"Fovea", etensor.FLOAT32, ss.World.CurStates["Fovea"].Shape.Shp, nil},
 		{"ProxSoma", etensor.FLOAT32, ss.World.CurStates["ProxSoma"].Shape.Shp, nil},
 		{"Vestibular", etensor.FLOAT32, ss.World.CurStates["Vestibular"].Shape.Shp, nil},
-		{"Inters", etensor.FLOAT32, ss.World.CurStates["Inters"].Shape.Shp, nil},
 		{"Action", etensor.FLOAT32, ss.World.CurStates["Action"].Shape.Shp, nil},
 	}
 	ss.State = etable.NewTable("input")
@@ -162,18 +157,18 @@ func (ss *Sim) Backward() {
 	ss.Step()
 }
 
-func (ss *Sim) Eat() {
-	ss.World.Action("Eat", nil)
-	ss.Step()
-}
-
-func (ss *Sim) Drink() {
-	ss.World.Action("Drink", nil)
-	ss.Step()
-}
+//func (ss *Sim) Eat() {
+//	ss.World.Action("Eat", nil)
+//	ss.Step()
+//}
+//
+//func (ss *Sim) Drink() {
+//	ss.World.Action("Drink", nil)
+//	ss.Step()
+//}
 
 func (ss *Sim) ConfigWorldView(tg *etview.TensorGrid) {
-	cnm := "FWorldColors"
+	cnm := "XYHDEnvColors"
 	cm, ok := giv.AvailColorMaps[cnm]
 	if !ok {
 		cm = &giv.ColorMap{}
@@ -205,10 +200,10 @@ func (ss *Sim) ConfigGui() *gi.Window {
 
 	// gi.WinEventTrace = true
 
-	gi.SetAppName("fworld")
+	gi.SetAppName("xyhdenv")
 	gi.SetAppAbout(`This tests an Env. See <a href="https://github.com/emer/emergent">emergent on GitHub</a>.</p>`)
 
-	win := gi.NewMainWindow("fworld", "Flat World", width, height)
+	win := gi.NewMainWindow("xyhdenv", "XY and Head Direction Environment", width, height)
 	ss.Win = win
 
 	vp := win.WinViewport2D()
@@ -315,22 +310,6 @@ func (ss *Sim) ConfigGui() *gi.Window {
 		act.SetActiveStateUpdt(!ss.IsRunning)
 	}}, win.This(), func(recv, send ki.Ki, sig int64, data interface{}) {
 		ss.Backward()
-		vp.SetFullReRender()
-	})
-
-	tbar.AddSeparator("sep-eat")
-
-	tbar.AddAction(gi.ActOpts{Label: "Eat", Icon: "field", Tooltip: "Eat food -- only if directly in front", UpdateFunc: func(act *gi.Action) {
-		act.SetActiveStateUpdt(!ss.IsRunning)
-	}}, win.This(), func(recv, send ki.Ki, sig int64, data interface{}) {
-		ss.Eat()
-		vp.SetFullReRender()
-	})
-
-	tbar.AddAction(gi.ActOpts{Label: "Drink", Icon: "svg", Tooltip: "Drink water -- only if directly in front", UpdateFunc: func(act *gi.Action) {
-		act.SetActiveStateUpdt(!ss.IsRunning)
-	}}, win.This(), func(recv, send ki.Ki, sig int64, data interface{}) {
-		ss.Drink()
 		vp.SetFullReRender()
 	})
 
