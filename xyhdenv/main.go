@@ -66,7 +66,9 @@ func (ss *Sim) Config() {
 	sch := etable.Schema{
 		{"TrialName", etensor.STRING, nil, nil},
 		{"ProxSoma", etensor.FLOAT32, ss.World.CurStates["ProxSoma"].Shape.Shp, nil},
+		{"Angle", etensor.FLOAT32, ss.World.CurStates["Angle"].Shape.Shp, nil},
 		{"Vestibular", etensor.FLOAT32, ss.World.CurStates["Vestibular"].Shape.Shp, nil},
+		{"Position", etensor.FLOAT32, ss.World.CurStates["Position"].Shape.Shp, nil},
 		{"Action", etensor.FLOAT32, ss.World.CurStates["Action"].Shape.Shp, nil},
 	}
 	ss.State = etable.NewTable("input")

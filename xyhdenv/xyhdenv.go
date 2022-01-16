@@ -31,6 +31,7 @@ type XYHDEnv struct {
 	Dsc         string                      `desc:"description of this environment"`
 	Size        evec.Vec2i                  `desc:"size of 2D world"`
 	PatSize     evec.Vec2i                  `desc:"size of patterns for mats, acts"`
+	PosSize     evec.Vec2i                  `desc:"size of patterns for xy coordinates"`
 	World       *etensor.Int                `view:"no-inline" desc:"2D grid world, each cell is a material (mat)"`
 	Mats        []string                    `desc:"list of materials in the world, 0 = empty.  Any superpositions of states need to be discretely encoded, can be transformed through action rules"`
 	MatMap      map[string]int              `desc:"map of material name to index stored in world cell"`
@@ -42,8 +43,11 @@ type XYHDEnv struct {
 	AngInc      int                         `desc:"angle increment for rotation, in degrees -- defaults to 45"`
 	NRotAngles  int                         `inactive:"+" desc:"total number of rotation angles in a circle"`
 	TraceActGen bool                        `desc:"for debugging, print out a trace of the action generation logic"`
+	RingSize    int                         `inactive:"+" desc:"number of units in ring population codes"`
 	PopSize     int                         `inactive:"+" desc:"number of units in population codes"`
 	PopCode     popcode.OneD                `desc:"population code values, in normalized units"`
+	PopCode2d   popcode.TwoD                `desc:"2d population code values, in normalized units"`
+	AngCode     popcode.Ring                `desc:"angle population code values, in normalized units"`
 
 	// current state below (params above)
 	PosF          mat32.Vec2                  `inactive:"+" desc:"current location of agent, floating point"`
@@ -51,7 +55,7 @@ type XYHDEnv struct {
 	Angle         int                         `inactive:"+" desc:"current angle, in degrees"`
 	RotAng        int                         `inactive:"+" desc:"angle that we just rotated -- drives vestibular"`
 	Act           int                         `inactive:"+" desc:"last action taken"`
-	ProxMats      []int                       `desc:"material at each right angle: front, left, right back"`
+	ProxMats      []int                       `desc:"material at each right angle: front, right, left, back"`
 	ProxPos       []evec.Vec2i                `desc:"coordinates for proximal grid points: front, right, left, back"`
 	CurStates     map[string]*etensor.Float32 `desc:"current rendered state tensors -- extensible map"`
 	NextStates    map[string]*etensor.Float32 `desc:"next rendered state tensors -- updated from actions"`
@@ -80,12 +84,18 @@ func (ev *XYHDEnv) Config(ntrls int) {
 	ev.Acts = []string{"Stay", "Left", "Right", "Forward", "Backward"}
 	ev.Params = make(map[string]float32)
 
-	ev.Size.Set(100, 100)
+	ev.Size.Set(100, 100) // if changing to non-square, reset the popcode2d min
 	ev.PatSize.Set(5, 5)
+	ev.PosSize.Set(16, 16)
 	ev.AngInc = 45
+	ev.RingSize = 16
 	ev.PopSize = 12
 	ev.PopCode.Defaults()
 	ev.PopCode.SetRange(-0.2, 1.2, 0.1)
+	ev.PopCode2d.Defaults()
+	ev.PopCode2d.SetRange(1/(float32(ev.Size.X)-2), 1, 0.1) // assume it's a square
+	ev.AngCode.Defaults()
+	ev.AngCode.SetRange(0, 1, 0.1)
 
 	// debugging options:
 	ev.TraceActGen = false
@@ -134,9 +144,17 @@ func (ev *XYHDEnv) ConfigImpl() {
 	ps.SetShape([]int{1, 4, 2, 1}, nil, []string{"1", "Pos", "OnOff", "1"})
 	ev.NextStates["ProxSoma"] = ps
 
+	ag := &etensor.Float32{}
+	ag.SetShape([]int{1, ev.PopSize}, nil, []string{"1", "Pop"})
+	ev.NextStates["Angle"] = ag
+
 	vs := &etensor.Float32{}
 	vs.SetShape([]int{1, ev.PopSize}, nil, []string{"1", "Pop"})
 	ev.NextStates["Vestibular"] = vs
+
+	xy := &etensor.Float32{}
+	xy.SetShape([]int{ev.PosSize.Y, ev.PosSize.X}, nil, []string{"Y", "X"})
+	ev.NextStates["Position"] = xy
 
 	av := &etensor.Float32{}
 	av.SetShape([]int{ev.PatSize.Y, ev.PatSize.X}, nil, []string{"Y", "X"})
@@ -436,11 +454,27 @@ func (ev *XYHDEnv) RenderProxSoma() {
 	}
 }
 
+// RenderAngle renders angle using pop ring
+func (ev *XYHDEnv) RenderAngle() {
+	as := ev.NextStates["Angle"]
+	av := (float32(ev.Angle) / 360.0)
+	ev.AngCode.Encode(&as.Values, av, ev.PopSize)
+}
+
 // RenderVestib renders vestibular state
 func (ev *XYHDEnv) RenderVestibular() {
 	vs := ev.NextStates["Vestibular"]
 	nv := 0.5*(float32(-ev.RotAng)/45) + 0.5
 	ev.PopCode.Encode(&vs.Values, nv, ev.PopSize, false)
+}
+
+// RenderPosition renders position using 2d popcode
+func (ev *XYHDEnv) RenderPosition() {
+	xy := ev.NextStates["Position"]
+	pv := ev.PosF
+	pv.X /= float32(ev.Size.X)-2
+	pv.Y /= float32(ev.Size.Y)-2
+	ev.PopCode2d.Encode(xy, pv, false)
 }
 
 // RenderAction renders action pattern
@@ -458,7 +492,9 @@ func (ev *XYHDEnv) RenderAction() {
 // RenderState renders the current state into NextState vars
 func (ev *XYHDEnv) RenderState() {
 	ev.RenderProxSoma()
+	ev.RenderAngle()
 	ev.RenderVestibular()
+	ev.RenderPosition()
 	ev.RenderAction()
 }
 
