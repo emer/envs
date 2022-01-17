@@ -29,6 +29,7 @@ import (
 type XYHDEnv struct {
 	Nm          string                      `desc:"name of this environment"`
 	Dsc         string                      `desc:"description of this environment"`
+	Disp        bool                        `desc:"update display -- turn off to make it faster"`
 	Size        evec.Vec2i                  `desc:"size of 2D world"`
 	PatSize     evec.Vec2i                  `desc:"size of patterns for mats, acts"`
 	PosSize     evec.Vec2i                  `desc:"size of patterns for xy coordinates"`
@@ -84,6 +85,7 @@ func (ev *XYHDEnv) Config(ntrls int) {
 	ev.Acts = []string{"Stay", "Left", "Right", "Forward", "Backward"}
 	ev.Params = make(map[string]float32)
 
+	ev.Disp = false
 	ev.Size.Set(100, 100) // if changing to non-square, reset the popcode2d min
 	ev.PatSize.Set(5, 5)
 	ev.PosSize.Set(16, 16)
@@ -145,7 +147,7 @@ func (ev *XYHDEnv) ConfigImpl() {
 	ev.NextStates["ProxSoma"] = ps
 
 	ag := &etensor.Float32{}
-	ag.SetShape([]int{1, ev.PopSize}, nil, []string{"1", "Pop"})
+	ag.SetShape([]int{1, ev.RingSize}, nil, []string{"1", "Pop"})
 	ev.NextStates["Angle"] = ag
 
 	vs := &etensor.Float32{}
@@ -458,7 +460,7 @@ func (ev *XYHDEnv) RenderProxSoma() {
 func (ev *XYHDEnv) RenderAngle() {
 	as := ev.NextStates["Angle"]
 	av := (float32(ev.Angle) / 360.0)
-	ev.AngCode.Encode(&as.Values, av, ev.PopSize)
+	ev.AngCode.Encode(&as.Values, av, ev.RingSize)
 }
 
 // RenderVestib renders vestibular state
