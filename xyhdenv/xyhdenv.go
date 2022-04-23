@@ -38,21 +38,24 @@ type XYHDEnv struct {
 	MatMap      map[string]int              `desc:"map of material name to index stored in world cell"`
 	BarrierIdx  int                         `desc:"index of material below which (inclusive) cannot move -- e.g., 1 for wall"`
 	Pats        map[string]*etensor.Float32 `desc:"patterns for each material (must include Empty) and for each action"`
-	Acts        []string                    `desc:"list of actions: starts with: Stay, Left, Right, Forward, Back, then extensible"`
+	Acts        []string                    `desc:"list of actions: starts with: Left, Right, Forward"`
 	ActMap      map[string]int              `desc:"action map of action names to indexes"`
-	Params      map[string]float32           `desc:"map of optional interoceptive and world-dynamic parameters -- cleaner to store in a map"`
-	AngInc      int                         `desc:"angle increment for rotation, in degrees -- defaults to 45"`
+	Params      map[string]float32          `desc:"map of optional interoceptive and world-dynamic parameters -- cleaner to store in a map"`
+	AngInc      int                         `desc:"angle increment for rotation, in degrees -- defaults to 90"`
 	NRotAngles  int                         `inactive:"+" desc:"total number of rotation angles in a circle"`
 	TraceActGen bool                        `desc:"for debugging, print out a trace of the action generation logic"`
 	RingSize    int                         `inactive:"+" desc:"number of units in ring population codes"`
-	PopSize     int                         `inactive:"+" desc:"number of units in population codes"`
+	VesSize     int                         `inactive:"+" desc:"number of units in population codes"`
 	PopCode     popcode.OneD                `desc:"population code values, in normalized units"`
 	PopCode2d   popcode.TwoD                `desc:"2d population code values, in normalized units"`
 	AngCode     popcode.Ring                `desc:"angle population code values, in normalized units"`
 
 	// current state below (params above)
+	PrevPosF      mat32.Vec2                  `inactive:"+" desc:"current location of agent, floating point"`
+	PrevPosI      evec.Vec2i                  `inactive:"+" desc:"current location of agent, integer"`
 	PosF          mat32.Vec2                  `inactive:"+" desc:"current location of agent, floating point"`
 	PosI          evec.Vec2i                  `inactive:"+" desc:"current location of agent, integer"`
+	PrevAngle     int                         `inactive:"+" desc:"current angle, in degrees"`
 	Angle         int                         `inactive:"+" desc:"current angle, in degrees"`
 	RotAng        int                         `inactive:"+" desc:"angle that we just rotated -- drives vestibular"`
 	Act           int                         `inactive:"+" desc:"last action taken"`
@@ -82,22 +85,23 @@ func (ev *XYHDEnv) Config(ntrls int) {
 	ev.Dsc = "Example world with xy coordinate system and head direction"
 	ev.Mats = []string{"Empty", "Wall"}
 	ev.BarrierIdx = 1
-	ev.Acts = []string{"Stay", "Left", "Right", "Forward", "Backward"}
+	ev.Acts = []string{"Left", "Right", "Forward"}
 	ev.Params = make(map[string]float32)
 
 	ev.Disp = false
-	ev.Size.Set(100, 100) // if changing to non-square, reset the popcode2d min
+	ev.Size.Set(200, 200) // if changing to non-square, reset the popcode2d min
 	ev.PatSize.Set(5, 5)
-	ev.PosSize.Set(16, 16)
-	ev.AngInc = 45
-	ev.RingSize = 16
-	ev.PopSize = 12
+	ev.PosSize.Set(12, 12)
+	ev.AngInc = 90
+	ev.RingSize = 16 // was 16
+	ev.VesSize = 12  // was 12
 	ev.PopCode.Defaults()
 	ev.PopCode.SetRange(-0.2, 1.2, 0.1)
 	ev.PopCode2d.Defaults()
-	ev.PopCode2d.SetRange(1/(float32(ev.Size.X)-2), 1, 0.1) // assume it's a square
+	ev.PopCode2d.SetRange(1/(float32(ev.Size.X)-2), 1, 0.2) // assume it's a square, 2 is length of walls
+	//ev.PopCode2d.SetRange(0, 1, 0.1) // assume it's a square, 2 is length of walls
 	ev.AngCode.Defaults()
-	ev.AngCode.SetRange(0, 1, 0.1)
+	ev.AngCode.SetRange(0, 1, 0.1) // zycyc experiment
 
 	// debugging options:
 	ev.TraceActGen = false
@@ -109,7 +113,7 @@ func (ev *XYHDEnv) Config(ntrls int) {
 
 	// uncomment to generate a new world
 	ev.GenWorld()
-	ev.SaveWorld("world.tsv")
+	//ev.SaveWorld("world.tsv")
 }
 
 // ConfigPats configures the bit pattern representations of mats and acts
@@ -150,13 +154,21 @@ func (ev *XYHDEnv) ConfigImpl() {
 	ag.SetShape([]int{1, ev.RingSize}, nil, []string{"1", "Pop"})
 	ev.NextStates["Angle"] = ag
 
+	prevag := &etensor.Float32{}
+	prevag.SetShape([]int{1, ev.RingSize}, nil, []string{"1", "Pop"})
+	ev.NextStates["PrevAngle"] = prevag
+
 	vs := &etensor.Float32{}
-	vs.SetShape([]int{1, ev.PopSize}, nil, []string{"1", "Pop"})
+	vs.SetShape([]int{1, ev.VesSize}, nil, []string{"1", "Pop"})
 	ev.NextStates["Vestibular"] = vs
 
 	xy := &etensor.Float32{}
 	xy.SetShape([]int{ev.PosSize.Y, ev.PosSize.X}, nil, []string{"Y", "X"})
 	ev.NextStates["Position"] = xy
+
+	prevxy := &etensor.Float32{}
+	prevxy.SetShape([]int{ev.PosSize.Y, ev.PosSize.X}, nil, []string{"Y", "X"})
+	ev.NextStates["PrevPosition"] = prevxy
 
 	av := &etensor.Float32{}
 	av.SetShape([]int{ev.PatSize.Y, ev.PatSize.X}, nil, []string{"Y", "X"})
@@ -406,37 +418,42 @@ func (ev *XYHDEnv) AddNewEventRefresh(wev *WEvent) {
 
 // TakeAct takes the action, updates state
 func (ev *XYHDEnv) TakeAct(act int) {
-	as := ""
-	if act >= len(ev.Acts) || act < 0 {
-		as = "Stay"
-	} else {
-		as = ev.Acts[act]
-	}
+	//as := ""
+	//if act >= len(ev.Acts) || act < 0 {
+	//	as = "Stay"
+	//} else {
+	//	as = ev.Acts[act]
+	//}
 
+	as := ev.Acts[act]
 	ev.RotAng = 0
 
 	nmat := len(ev.Mats)
 	frmat := ints.MinInt(ev.ProxMats[0], nmat)
-	behmat := ev.ProxMats[3] // behind
+	//behmat := ev.ProxMats[3] // behind
 
+	ev.PrevPosF, ev.PrevPosI = ev.PosF, ev.PosI
+	ev.PrevAngle = ev.Angle
 	switch as {
-	case "Stay":
+	//case "Stay":
 	case "Left":
 		ev.RotAng = ev.AngInc
 		ev.Angle = AngMod(ev.Angle + ev.RotAng)
+		ev.PosF, ev.PosI = NextVecPoint(ev.PosF, AngVec(ev.Angle)) // when L/R contains forward
 	case "Right":
 		ev.RotAng = -ev.AngInc
 		ev.Angle = AngMod(ev.Angle + ev.RotAng)
+		ev.PosF, ev.PosI = NextVecPoint(ev.PosF, AngVec(ev.Angle)) // when L/R contains forward
 	case "Forward":
 		if frmat > 0 && frmat <= ev.BarrierIdx {
 		} else {
 			ev.PosF, ev.PosI = NextVecPoint(ev.PosF, AngVec(ev.Angle))
 		}
-	case "Backward":
-		if behmat > 0 && behmat <= ev.BarrierIdx {
-		} else {
-			ev.PosF, ev.PosI = NextVecPoint(ev.PosF, AngVec(AngMod(ev.Angle+180)))
-		}
+		//case "Backward":
+		//	if behmat > 0 && behmat <= ev.BarrierIdx {
+		//	} else {
+		//		ev.PosF, ev.PosI = NextVecPoint(ev.PosF, AngVec(AngMod(ev.Angle+180)))
+		//	}
 	}
 	ev.ScanProx()
 
@@ -457,25 +474,47 @@ func (ev *XYHDEnv) RenderProxSoma() {
 }
 
 // RenderAngle renders angle using pop ring
-func (ev *XYHDEnv) RenderAngle() {
-	as := ev.NextStates["Angle"]
-	av := (float32(ev.Angle) / 360.0)
+func (ev *XYHDEnv) RenderAngle(statenm string, angle int) {
+	as := ev.NextStates[statenm]
+	av := (float32(angle) / 360.0)
 	ev.AngCode.Encode(&as.Values, av, ev.RingSize)
+
+	//as.SetZeros()
+	//if angle == 0 || angle == 360 {
+	//	as.Values = []float32{0, 1, 0, 1}
+	//} else if angle == 90 {
+	//	as.Values = []float32{0, 0, 1, 1}
+	//} else if angle == 180 {
+	//	as.Values = []float32{1, 0, 1, 0}
+	//} else if angle == 270 {
+	//	as.Values = []float32{1, 1, 0, 0}
+	//}
+
 }
 
 // RenderVestib renders vestibular state
 func (ev *XYHDEnv) RenderVestibular() {
 	vs := ev.NextStates["Vestibular"]
-	nv := 0.5*(float32(-ev.RotAng)/45) + 0.5
-	ev.PopCode.Encode(&vs.Values, nv, ev.PopSize, false)
+	nv := 0.5*(float32(-ev.RotAng)/90) + 0.5
+	ev.PopCode.Encode(&vs.Values, nv, ev.VesSize, false)
+
+	//vs.SetZeros()
+	//if ev.RotAng == -90 {
+	//	vs.Values = []float32{1, 0, 0}
+	//} else if ev.RotAng == 0 {
+	//	vs.Values = []float32{0, 1, 0}
+	//} else if ev.RotAng == 90 {
+	//	vs.Values = []float32{0, 0, 1}
+	//}
+
 }
 
 // RenderPosition renders position using 2d popcode
-func (ev *XYHDEnv) RenderPosition() {
-	xy := ev.NextStates["Position"]
-	pv := ev.PosF
-	pv.X /= float32(ev.Size.X)-2
-	pv.Y /= float32(ev.Size.Y)-2
+func (ev *XYHDEnv) RenderPosition(statenm string, posf mat32.Vec2) {
+	xy := ev.NextStates[statenm]
+	pv := posf
+	pv.X /= float32(ev.Size.X) - 2
+	pv.Y /= float32(ev.Size.Y) - 2
 	ev.PopCode2d.Encode(xy, pv, false)
 }
 
@@ -494,9 +533,11 @@ func (ev *XYHDEnv) RenderAction() {
 // RenderState renders the current state into NextState vars
 func (ev *XYHDEnv) RenderState() {
 	ev.RenderProxSoma()
-	ev.RenderAngle()
+	ev.RenderAngle("Angle", ev.Angle)
+	ev.RenderAngle("PrevAngle", ev.PrevAngle)
 	ev.RenderVestibular()
-	ev.RenderPosition()
+	ev.RenderPosition("Position", ev.PosF)
+	ev.RenderPosition("PrevPosition", ev.PrevPosF)
 	ev.RenderAction()
 }
 
@@ -716,6 +757,8 @@ func (ev *XYHDEnv) ActGen() int {
 
 	nmat := len(ev.Mats)
 	frmat := ints.MinInt(ev.ProxMats[0], nmat)
+	rmat := ints.MinInt(ev.ProxMats[1], nmat)
+	lmat := ints.MinInt(ev.ProxMats[2], nmat)
 
 	rlp := float64(.5)
 	rlact := left
@@ -728,30 +771,72 @@ func (ev *XYHDEnv) ActGen() int {
 	frnd := rand.Float32()
 
 	act := ev.ActMap["Forward"] // default
+
+	// when L/R contains forward
 	switch {
 	case frmat == wall:
-		if lastact == left || lastact == right {
-			act = lastact // keep going
-			ev.ActGenTrace("at wall, keep turning", act)
+		if (rmat != wall) && (lmat != wall) {
+			if lastact == left || lastact == right {
+				act = lastact // keep going
+				ev.ActGenTrace("at wall, keep turning", act)
+			} else {
+				act = rlact
+				ev.ActGenTrace(fmt.Sprintf("at wall, rlp: %s, turn", rlps), act)
+			}
+		} else if rmat == wall {
+			act = left
 		} else {
-			act = rlact
-			ev.ActGenTrace(fmt.Sprintf("at wall, rlp: %s, turn", rlps), act)
+			act = right
 		}
 	default: // random explore -- nothing obvious
 		switch {
-		case frnd < 0.25:
-			act = lastact // continue
-			ev.ActGenTrace("repeat last act", act)
-		case frnd < 0.4:
-			act = left
+		//case frnd < 0.25:
+		//	act = lastact // continue
+		//	ev.ActGenTrace("repeat last act", act)
+		case frnd < 0.15:
+			if lmat == wall {
+				act = right
+			} else {
+				act = left
+			}
 			ev.ActGenTrace("turn", act)
-		case frnd < 0.55:
-			act = right
+		case frnd < 0.3:
+			if rmat == wall {
+				act = left
+			} else {
+				act = right
+			}
 			ev.ActGenTrace("turn", act)
 		default:
 			ev.ActGenTrace("go", act)
 		}
 	}
+
+	// when L/R doesn't contain forward
+	//switch {
+	//case frmat == wall:
+	//	if lastact == left || lastact == right {
+	//		act = lastact // keep going
+	//		ev.ActGenTrace("at wall, keep turning", act)
+	//	} else {
+	//		act = rlact
+	//		ev.ActGenTrace(fmt.Sprintf("at wall, rlp: %s, turn", rlps), act)
+	//	}
+	//default: // random explore -- nothing obvious
+	//	switch {
+	//	//case frnd < 0.25:
+	//	//	act = lastact // continue
+	//	//	ev.ActGenTrace("repeat last act", act)
+	//	case frnd < 0.15:
+	//		act = left
+	//		ev.ActGenTrace("turn", act)
+	//	case frnd < 0.3:
+	//		act = right
+	//		ev.ActGenTrace("turn", act)
+	//	default:
+	//		ev.ActGenTrace("go", act)
+	//	}
+	//}
 
 	return act
 }
