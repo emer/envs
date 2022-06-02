@@ -20,10 +20,9 @@ import (
 	"github.com/emer/etable/etensor"
 	"github.com/goki/gi/gi"
 	"github.com/goki/gi/gi3d"
-	"github.com/goki/gi/oswin"
-	"github.com/goki/gi/oswin/gpu"
 	"github.com/goki/ki/ki"
 	"github.com/goki/mat32"
+	"github.com/goki/vgpu/vgpu"
 )
 
 // Obj3DSac generates renderings of 3D objects with saccadic eye movements.
@@ -65,14 +64,14 @@ type Obj3DSac struct {
 	SaveDir string     `inactive:"+" desc:"name of current directory to save files into (images/train or images/test)"`
 	ImgFile string     `inactive:"+" desc:"name of image file"`
 
-	Image     image.Image     `view:"-" desc:"current rendered image in specified size"`
-	ViewImage *gi.Bitmap      `view:"-" desc:"View of image (scaled up) as a bitmap"`
-	Scene     *gi3d.Scene     `view:"-" desc:"3D scene"`
-	Group     *gi3d.Group     `view:"-" desc:"group holding loaded object"`
-	Frame     gpu.Framebuffer `view:"-" desc:"offscreen render buffer"`
-	File      *os.File        `view:"-" desc:"save file"`
-	StopNow   bool            `view:"-" desc:"flag to stop running"`
-	IsRunning bool            `view:"-" desc:"true when running"`
+	Image     image.Image      `view:"-" desc:"current rendered image in specified size"`
+	ViewImage *gi.Bitmap       `view:"-" desc:"View of image (scaled up) as a bitmap"`
+	Scene     *gi3d.Scene      `view:"-" desc:"3D scene"`
+	Group     *gi3d.Group      `view:"-" desc:"group holding loaded object"`
+	Frame     vgpu.RenderFrame `view:"-" desc:"offscreen render buffer"`
+	File      *os.File         `view:"-" desc:"save file"`
+	StopNow   bool             `view:"-" desc:"flag to stop running"`
+	IsRunning bool             `view:"-" desc:"true when running"`
 }
 
 func (ob *Obj3DSac) Defaults() {
@@ -181,24 +180,26 @@ func (ob *Obj3DSac) OpenObj(obj string) error {
 
 // Render generates image from current object, saving to Image
 func (ob *Obj3DSac) Render() error {
-	frame := &ob.Frame
-	sc := ob.Scene
-	err := sc.ActivateOffFrame(frame, "objrend", ob.ImgSize, 4)
-	if err != nil {
-		return err
-	}
-	sc.RenderOffFrame()
-	(*frame).Rendered()
+	/*
+		frame := &ob.Frame
+		sc := ob.Scene
+		err := sc.ActivateOffFrame(frame, "objrend", ob.ImgSize, 4)
+		if err != nil {
+			return err
+		}
+		sc.RenderOffFrame()
+		(*frame).Rendered()
 
-	oswin.TheApp.RunOnMain(func() {
-		tex := (*frame).Texture()
-		tex.SetBotZero(true)
-		ob.Image = tex.GrabImage()
-	})
-	if ob.ViewImage != nil {
-		vwsz := ob.ImgSize.Mul(ob.ViewScale)
-		ob.ViewImage.SetImage(ob.Image, float32(vwsz.X), float32(vwsz.Y))
-	}
+		oswin.TheApp.RunOnMain(func() {
+			tex := (*frame).Texture()
+			tex.SetBotZero(true)
+			ob.Image = tex.GrabImage()
+		})
+		if ob.ViewImage != nil {
+			vwsz := ob.ImgSize.Mul(ob.ViewScale)
+			ob.ViewImage.SetImage(ob.Image, float32(vwsz.X), float32(vwsz.Y))
+		}
+	*/
 	return nil
 }
 

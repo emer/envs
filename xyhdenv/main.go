@@ -10,6 +10,7 @@ import (
 	"github.com/emer/etable/etensor"
 	"github.com/emer/etable/etview"
 	_ "github.com/emer/etable/etview" // include to get gui views
+	"github.com/goki/gi/colormap"
 	"github.com/goki/gi/gi"
 	"github.com/goki/gi/gimain"
 	"github.com/goki/gi/gist"
@@ -171,9 +172,9 @@ func (ss *Sim) Backward() {
 
 func (ss *Sim) ConfigWorldView(tg *etview.TensorGrid) {
 	cnm := "XYHDEnvColors"
-	cm, ok := giv.AvailColorMaps[cnm]
+	cm, ok := colormap.AvailMaps[cnm]
 	if !ok {
-		cm = &giv.ColorMap{}
+		cm = &colormap.Map{}
 		cm.Name = cnm
 		cm.Indexed = true
 		nc := len(ss.World.Mats)
@@ -182,12 +183,12 @@ func (ss *Sim) ConfigWorldView(tg *etview.TensorGrid) {
 		for i, cnm := range ss.MatColors {
 			cm.Colors[i].SetString(cnm, nil)
 		}
-		ch := giv.AvailColorMaps["ColdHot"]
+		ch := colormap.AvailMaps["ColdHot"]
 		for i := 0; i < ss.World.NRotAngles; i++ {
 			nv := float64(i) / float64(ss.World.NRotAngles-1)
 			cm.Colors[nc+i] = ch.Map(nv) // color map of rotation
 		}
-		giv.AvailColorMaps[cnm] = cm
+		colormap.AvailMaps[cnm] = cm
 	}
 	tg.Disp.Defaults()
 	tg.Disp.ColorMap = giv.ColorMapName(cnm)
