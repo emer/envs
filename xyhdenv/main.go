@@ -155,11 +155,6 @@ func (ss *Sim) Forward() {
 	ss.Step()
 }
 
-func (ss *Sim) Backward() {
-	ss.World.Action("Backward", nil)
-	ss.Step()
-}
-
 //func (ss *Sim) Eat() {
 //	ss.World.Action("Eat", nil)
 //	ss.Step()
@@ -306,13 +301,6 @@ func (ss *Sim) ConfigGui() *gi.Window {
 		act.SetActiveStateUpdt(!ss.IsRunning)
 	}}, win.This(), func(recv, send ki.Ki, sig int64, data interface{}) {
 		ss.Forward()
-		vp.SetFullReRender()
-	})
-
-	tbar.AddAction(gi.ActOpts{Label: "Backward", Icon: "wedge-down", Tooltip: "Step Backward", UpdateFunc: func(act *gi.Action) {
-		act.SetActiveStateUpdt(!ss.IsRunning)
-	}}, win.This(), func(recv, send ki.Ki, sig int64, data interface{}) {
-		ss.Backward()
 		vp.SetFullReRender()
 	})
 
