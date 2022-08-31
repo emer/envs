@@ -68,9 +68,9 @@ func (ev *ImagesEnv) Validate() error {
 
 func (ev *ImagesEnv) Defaults() {
 	ev.TransSigma = 0.15
-	ev.TransMax.Set(0.3, 0.3)
-	ev.ScaleRange.Set(0.4, 1.0)
-	ev.RotateMax = 8
+	ev.TransMax.Set(0.2, 0.2)   // lvis uses .2, .2
+	ev.ScaleRange.Set(0.8, 1.1) // .8, 1.1
+	ev.RotateMax = 8            // 8
 	ev.V1m16.Defaults(24, 8)
 	ev.V1h16.Defaults(12, 4)
 	ev.V1m8.Defaults(12, 4)
