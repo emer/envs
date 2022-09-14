@@ -11,7 +11,6 @@ import (
 	"github.com/emer/emergent/env"
 	"github.com/emer/emergent/evec"
 	"github.com/emer/emergent/patgen"
-	"github.com/emer/emergent/popcode"
 	"github.com/emer/etable/etensor"
 )
 
@@ -20,21 +19,23 @@ import (
 type Approach struct {
 	Drives      int                         `desc:"number of different drive-like body states (hunger, thirst, etc), that are satisfied by a corresponding US outcome"`
 	CSPerDrive  int                         `desc:"number of different CS sensory cues associated with each US (simplest case is 1 -- one-to-one mapping), presented on a fovea input layer"`
-	Locations   int                         `desc:"number of different locations"`
+	Locations   int                         `desc:"number of different locations -- always <= number of drives -- drives have a unique location"`
 	DistMax     int                         `desc:"maximum distance in time steps to reach the US"`
-	NewStateInt int                         `desc:"interval in trials for generating a new state"`
+	TimeMax     int                         `desc:"maximum number of time steps before resetting"`
+	NewStateInt int                         `desc:"interval in trials for generating a new state, only if > 0"`
 	CSTot       int                         `desc:"total number of CS's = Drives * CSPerDrive"`
+	NYReps      int                         `desc:"number of Y-axis repetitions of localist stimuli -- for redundancy in spiking nets"`
 	PatSize     evec.Vec2i                  `desc:"size of CS patterns"`
 	ActMap      map[string]int              `desc:"action map of action names to indexes"`
 	States      map[string]*etensor.Float32 `desc:"named states -- e.g., USs, CSs, etc"`
-	PopCode     popcode.OneD                `desc:"population code values, in normalized units"`
 	TrgPos      int                         `desc:"target position where Drive US is"`
 	Drive       int                         `desc:"current drive state"`
 	Dist        int                         `desc:"current distance"`
+	Time        int                         `desc:"current time, counting up until starting over"`
 	Pos         int                         `desc:"current position being looked at"`
-	StateCtr    int                         `desc:"count down for generating a new state"`
 	Rew         float32                     `desc:"reward"`
 	US          int                         `desc:"US is -1 unless consumed at Dist = 0"`
+	StateCtr    int                         `desc:"count up for generating a new state"`
 }
 
 func (ev *Approach) Name() string {
@@ -49,12 +50,14 @@ func (ev *Approach) Desc() string {
 func (ev *Approach) Defaults() {
 	ev.Drives = 4
 	ev.CSPerDrive = 1
-	ev.Locations = 8
+	ev.Locations = 4 // <= drives always
 	ev.DistMax = 4
-	ev.NewStateInt = 4
+	ev.TimeMax = 10
+	ev.NewStateInt = -1
+	ev.NYReps = 4
 	ev.PatSize.Set(6, 6)
-	ev.PopCode.Defaults()
-	ev.PopCode.SetRange(-0.2, 1.2, 0.1)
+	// ev.PopCode.Defaults()
+	// ev.PopCode.SetRange(-0.2, 1.2, 0.1)
 }
 
 // Config configures the world
@@ -68,10 +71,12 @@ func (ev *Approach) Config() {
 	ev.States = make(map[string]*etensor.Float32)
 	ev.States["USs"] = etensor.NewFloat32([]int{ev.Locations}, nil, nil)
 	ev.States["CSs"] = etensor.NewFloat32([]int{ev.Locations}, nil, nil)
-	ev.States["Drive"] = etensor.NewFloat32([]int{ev.Drives}, nil, nil)
-	ev.States["US"] = etensor.NewFloat32([]int{ev.Drives + 1}, nil, nil)
+	ev.States["Pos"] = etensor.NewFloat32([]int{ev.NYReps, ev.Locations}, nil, nil)
+	ev.States["Drive"] = etensor.NewFloat32([]int{ev.NYReps, ev.Drives}, nil, nil)
+	ev.States["US"] = etensor.NewFloat32([]int{ev.NYReps, ev.Drives + 1}, nil, nil)
 	ev.States["CS"] = etensor.NewFloat32([]int{ev.PatSize.Y, ev.PatSize.X}, nil, nil)
-	ev.States["Dist"] = etensor.NewFloat32([]int{ev.DistMax, 1}, nil, nil)
+	ev.States["Dist"] = etensor.NewFloat32([]int{ev.NYReps, ev.DistMax}, nil, nil)
+	ev.States["Time"] = etensor.NewFloat32([]int{ev.NYReps, ev.TimeMax}, nil, nil)
 	ev.States["Rew"] = etensor.NewFloat32([]int{1, 1}, nil, nil)
 
 	ev.ConfigPats()
@@ -105,14 +110,15 @@ func (ev *Approach) State(el string) etensor.Tensor {
 func (ev *Approach) NewState() {
 	uss := ev.States["USs"]
 	css := ev.States["CSs"]
+	drives := rand.Perm(ev.Drives)
 	for l := 0; l < ev.Locations; l++ {
-		us := rand.Intn(ev.Drives)
+		us := drives[l]
 		cs := rand.Intn(ev.CSPerDrive)
 		pat := us*ev.CSPerDrive + cs
 		uss.Values[l] = float32(us)
 		css.Values[l] = float32(pat)
 	}
-	ev.StateCtr = ev.NewStateInt
+	ev.StateCtr = 0
 	ev.NewStart()
 }
 
@@ -125,7 +131,12 @@ func (ev *Approach) PatToUS(pat int) (us, cs int) {
 
 // NewStart starts a new approach run
 func (ev *Approach) NewStart() {
+	ev.StateCtr++
+	if ev.NewStateInt > 0 && ev.StateCtr >= ev.NewStateInt {
+		ev.NewState()
+	}
 	ev.Dist = 1 + rand.Intn(ev.DistMax-1)
+	ev.Time = 0
 	ev.Pos = rand.Intn(ev.Locations)
 	ev.TrgPos = rand.Intn(ev.Locations)
 	uss := ev.States["USs"]
@@ -136,32 +147,46 @@ func (ev *Approach) NewStart() {
 	ev.RenderRewUS()
 }
 
+// RenderLocalist renders one localist state
+func (ev *Approach) RenderLocalist(name string, val int) {
+	st := ev.States[name]
+	st.SetZeros()
+	for y := 0; y < ev.NYReps; y++ {
+		st.Set([]int{y, val}, 1.0)
+	}
+}
+
 // RenderState renders the current state
 func (ev *Approach) RenderState() {
+	ev.RenderLocalist("Pos", ev.Pos)
+	ev.RenderLocalist("Drive", ev.Drive)
+	ev.RenderLocalist("Dist", ev.Dist)
+	ev.RenderLocalist("Time", ev.Time)
+
 	css := ev.States["CSs"]
 	patn := int(css.Values[ev.Pos])
 	pats := ev.States["Pats"]
-	cs := ev.States["CS"]
-	drive := ev.States["Drive"]
 	pat := pats.SubSpace([]int{patn})
+	cs := ev.States["CS"]
 	cs.CopyFrom(pat)
-	drive.SetZeros()
-	drive.Values[ev.Drive] = 1
-	dist := ev.States["Dist"]
-	ev.PopCode.Encode(&dist.Values, float32(ev.Dist), ev.DistMax, false)
 }
 
 // RenderRewUS renders reward and US
 func (ev *Approach) RenderRewUS() {
-	usst := ev.States["US"]
-	usst.SetZeros()
-	usst.Values[ev.US+1] = 1
+	if ev.US < 0 {
+		ev.RenderLocalist("US", ev.Drives)
+	} else {
+		ev.RenderLocalist("US", ev.US)
+	}
 	rew := ev.States["Rew"]
 	rew.Values[0] = ev.Rew
 }
 
 // Step does one step
 func (ev *Approach) Step() bool {
+	if ev.Dist < 0 || ev.Time >= ev.TimeMax {
+		ev.NewStart()
+	}
 	ev.RenderState()
 	ev.Rew = 0
 	ev.US = -1
@@ -175,15 +200,12 @@ func (ev *Approach) Action(action string, nop etensor.Tensor) {
 		fmt.Printf("Action not recognized: %s\n", action)
 		return
 	}
+	ev.Time++
 	uss := ev.States["USs"]
 	us := int(uss.Values[ev.Pos])
 	switch action {
 	case "Forward":
 		ev.Dist--
-		if ev.Dist <= 0 {
-			ev.US = us // still report the us present
-			ev.NewStart()
-		}
 	case "Left":
 		ev.Pos--
 		if ev.Pos < 0 {
@@ -202,4 +224,5 @@ func (ev *Approach) Action(action string, nop etensor.Tensor) {
 			ev.US = us
 		}
 	}
+	ev.RenderRewUS()
 }
