@@ -57,6 +57,15 @@ func (ss *Sim) UpdateGrids() {
 	}
 }
 
+func (ss *Sim) Step() {
+	act := ss.Env.ActGen()
+	actNm := ss.Env.Acts[act]
+	ss.Env.Action(actNm, nil)
+	ss.Env.Step()
+	// ss.View.UpdateTable()
+
+}
+
 // ConfigGui configures the GoGi gui interface for this simulation,
 func (ss *Sim) ConfigGui() *gi.Window {
 	width := 1600
@@ -90,7 +99,7 @@ func (ss *Sim) ConfigGui() *gi.Window {
 	ss.Grids = tv.AddNewTab(gi.KiT_Layout, "Grids").(*gi.Layout)
 	ss.Grids.Lay = gi.LayoutVert
 
-	ss.GridNames = []string{"USs", "CSs", "Pos", "Drive", "US", "Rew", "CS", "Dist", "Time"}
+	ss.GridNames = []string{"USs", "CSs", "Pos", "Drives", "US", "Rew", "CS", "Dist", "Time", "Action"}
 	for _, gr := range ss.GridNames {
 		tg := &etview.TensorGrid{}
 		tg.SetName(gr)
@@ -114,8 +123,7 @@ func (ss *Sim) ConfigGui() *gi.Window {
 	})
 
 	tbar.AddAction(gi.ActOpts{Label: "Step", Icon: "step-fwd", Tooltip: "Step env."}, win.This(), func(recv, send ki.Ki, sig int64, data interface{}) {
-		ss.Env.Step()
-		// ss.View.UpdateTable()
+		ss.Step()
 		ss.UpdateGrids()
 		vp.SetNeedsFullRender()
 		vp.UpdateSig()
