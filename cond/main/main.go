@@ -47,10 +47,9 @@ var TheSim Sim
 // Config configures all the elements using the standard functions
 func (ss *Sim) Config() {
 	ss.RunName = "PosAcq_B50"
-	ss.Env.Config()
+	ss.Env.Config(1, ss.RunName)
 	// ss.Sac.AddRows = true
-	ss.Env.Init(0, 1, ss.RunName)
-	ss.Env.Step() // need one in there
+	ss.Env.Init(0)
 }
 
 func (ss *Sim) UpdateGrids() {
@@ -113,7 +112,8 @@ func (ss *Sim) ConfigGui() *gi.Window {
 	split.SetSplits(.2, .8)
 
 	tbar.AddAction(gi.ActOpts{Label: "Init", Icon: "reset", Tooltip: "Init env."}, win.This(), func(recv, send ki.Ki, sig int64, data interface{}) {
-		ss.Env.Init(0, 1, ss.RunName)
+		ss.Env.RunName = ss.RunName
+		ss.Env.Init(0)
 		// ss.View.UpdateTable()
 		vp.SetNeedsFullRender()
 		vp.UpdateSig()

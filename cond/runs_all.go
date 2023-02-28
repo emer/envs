@@ -4,6 +4,20 @@
 
 package cond
 
+import "sort"
+
+var RunNames []string
+
+func init() {
+	RunNames = make([]string, len(AllRuns))
+	idx := 0
+	for nm := range AllRuns {
+		RunNames[idx] = nm
+		idx++
+	}
+	sort.Strings(RunNames)
+}
+
 var AllRuns = map[string]Run{
 	"PosAcq_B50": {
 		Name:  "PosAcq_B50",

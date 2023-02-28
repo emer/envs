@@ -44,7 +44,9 @@ type CondEnv struct {
 func (ev *CondEnv) Name() string { return ev.Nm }
 func (ev *CondEnv) Desc() string { return ev.Dsc }
 
-func (ev *CondEnv) Config() {
+func (ev *CondEnv) Config(rmax int, rnm string) {
+	ev.RunName = rnm
+	ev.Run.Max = rmax
 	ev.NYReps = 4
 	ev.Run.Scale = env.Run
 	ev.Condition.Scale = env.Condition
@@ -67,12 +69,14 @@ func (ev *CondEnv) Config() {
 	ev.CurStates["NegPV"] = etensor.NewFloat32(pvsh, nil, nil)
 }
 
+func (ev *CondEnv) Validate() error {
+	return nil
+}
+
 // Init sets current run index and max
-func (ev *CondEnv) Init(ridx, rmax int, rnm string) {
-	ev.RunName = rnm
+func (ev *CondEnv) Init(ridx int) {
 	run := AllRuns[ev.RunName]
 	ev.Run.Set(ridx)
-	ev.Run.Max = rmax
 	ev.Condition.Init()
 	ev.Condition.Max = run.NConds()
 	ev.InitCond()
@@ -80,6 +84,9 @@ func (ev *CondEnv) Init(ridx, rmax int, rnm string) {
 
 // InitCond initializes for current condition index
 func (ev *CondEnv) InitCond() {
+	if ev.RunName == "" {
+		ev.RunName = "PosAcq_B50"
+	}
 	run := AllRuns[ev.RunName]
 	cnm, cond := run.Cond(ev.Condition.Cur)
 	ev.Block.Init()
