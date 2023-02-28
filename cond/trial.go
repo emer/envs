@@ -79,7 +79,7 @@ func GenerateTrials(condNm string) []*Trial {
 		if trl.Context == "" {
 			trl.Context = trl.CS
 		}
-		nRpt := int(mat32.Round(trl.Pct * float32(cond.BlocksPerIter)))
+		nRpt := int(mat32.Round(trl.Pct * float32(cond.NTrials)))
 		if nRpt < 1 {
 			if trl.Pct > 0.0 {
 				nRpt = 1

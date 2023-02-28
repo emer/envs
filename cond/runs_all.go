@@ -5,31 +5,27 @@
 package cond
 
 var AllRuns = map[string]Run{
-	"RunMaster": {
-		Name:  "RunMaster",
-		Desc:  "",
+	"PosAcq_B50": {
+		Name:  "PosAcq_B50",
+		Desc:  "Standard positive valence acquisition: A = 100%, B = 50%",
 		Cond1: "PosAcq_B50",
-	},
-	"USDebug": {
-		Name:  "USDebug",
-		Desc:  "",
-		Cond1: "USDebug",
-	},
-	"US0": {
-		Name:  "US0",
-		Desc:  "",
-		Cond1: "US0",
 	},
 	"PosAcq_A50": {
 		Name:  "PosAcq_A50",
-		Desc:  "",
+		Desc:  "A = 50%, B = 50%",
 		Cond1: "PosAcq_A50",
 	},
 	"PosAcq_B50Ext": {
 		Name:  "PosAcq_B50Ext",
-		Desc:  "",
+		Desc:  "Acquire, extinguish",
 		Cond1: "PosAcq_B50",
 		Cond2: "PosExtinct",
+	},
+	"PosAcq_B50ExtFast": {
+		Name:    "PosAcq_B50Ext",
+		Desc:    "Load weights of acquisition, go directly to extinguish -- must run PosAcq_B50 first to get weights",
+		Weights: "PosAcq_B50",
+		Cond1:   "PosExtinct",
 	},
 	"PosAcq_B50ExtAcq": {
 		Name:  "PosAcq_B50ExtAcq",
@@ -42,17 +38,6 @@ var AllRuns = map[string]Run{
 		Name:  "PosAcq_B100Ext",
 		Desc:  "",
 		Cond1: "PosAcq_B100",
-		Cond2: "PosExtinct",
-	},
-	"PosAcq": {
-		Name:  "PosAcq",
-		Desc:  "",
-		Cond1: "PosAcq_B50",
-	},
-	"PosExt": {
-		Name:  "PosExt",
-		Desc:  "",
-		Cond1: "PosAcq_B50",
 		Cond2: "PosExtinct",
 	},
 	"PosAcq_B25": {
@@ -177,16 +162,6 @@ var AllRuns = map[string]Run{
 		Cond1: "NegAcqMag",
 		Cond2: "NegAcqMagChange",
 	},
-	"CondExp": {
-		Name:  "CondExp",
-		Desc:  "",
-		Cond1: "CondExp",
-	},
-	"PainExp": {
-		Name:  "PainExp",
-		Desc:  "",
-		Cond1: "PainExp",
-	},
 	"PosNeg": {
 		Name:  "PosNeg",
 		Desc:  "",
@@ -207,5 +182,15 @@ var AllRuns = map[string]Run{
 		Name:  "PosCondInhib_test",
 		Desc:  "For debugging",
 		Cond1: "PosCondInhib_test",
+	},
+	"USDebug": {
+		Name:  "USDebug",
+		Desc:  "",
+		Cond1: "USDebug",
+	},
+	"US0": {
+		Name:  "US0",
+		Desc:  "",
+		Cond1: "US0",
 	},
 }

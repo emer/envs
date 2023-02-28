@@ -6,14 +6,11 @@ package cond
 
 // Condition defines parameters for running a specific type of conditioning expt
 type Condition struct {
-	Name          string `desc:"identifier for this type of configuration"`
-	Desc          string `desc:"description of this configuration"`
-	Block         string `desc:"type of block to run -- must be listed in AllBlocks"`
-	FixedProb     bool   `desc:"use a permuted list to ensure an exact number of trials have US -- else random draw each time"`
-	NIters        int    `desc:"number of iterations to run"`
-	BlocksPerIter int    `desc:"number of blocks (1 block = one behavioral trial = sequence of CS, US) in each iteration -- needs to be higher if there are stochastic variables (probabilities)."`
-	Permute       bool   `desc:"permute list of fully-instantiated trials after generation"`
-	LoadWeights   bool   `desc:"load initial weights from a file (specified in weights_file)"`
-	WeightsFile   string `desc:"full relative path (from project) of weights file to load -- use CRR: prefix to load from cluster run results directory"`
-	LoadStBlk     int    `desc:"after loading weights, reset block counter to this value (-1 = leave at value from the loaded weights)"`
+	Name      string `desc:"identifier for this type of configuration"`
+	Desc      string `desc:"description of this configuration"`
+	Block     string `desc:"mix of trial types per block to run -- must be listed in AllBlocks"`
+	FixedProb bool   `desc:"use a permuted list to ensure an exact number of trials have US -- else random draw each time"`
+	NBlocks   int    `desc:"number of full blocks of different trial types to run (like Epochs)"`
+	NTrials   int    `desc:"number of behavioral trials per block -- blocks, with the different types of Trials specified in Block allocated across these Trials.  More different trial types and greater stochasticity (lower probability) of US presentation requires more trials."`
+	Permute   bool   `desc:"permute list of generated trials in random order after generation -- otherwise presented in order specified in the Block type"`
 }

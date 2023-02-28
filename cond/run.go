@@ -6,11 +6,46 @@ package cond
 
 // Run is a sequence of Conditions to run in order
 type Run struct {
-	Name  string `desc:"Name of the run"`
-	Desc  string `desc:"Description"`
-	Cond1 string `desc:"name of condition 1"`
-	Cond2 string `desc:"name of condition 2"`
-	Cond3 string `desc:"name of condition 3"`
-	Cond4 string `desc:"name of condition 4"`
-	Cond5 string `desc:"name of condition 5"`
+	Name    string `desc:"Name of the run"`
+	Desc    string `desc:"Description"`
+	Weights string `desc:"name of condition for weights file to load prior to starting -- allows faster testing but weights may be out of date"`
+	Cond1   string `desc:"name of condition 1"`
+	Cond2   string `desc:"name of condition 2"`
+	Cond3   string `desc:"name of condition 3"`
+	Cond4   string `desc:"name of condition 4"`
+	Cond5   string `desc:"name of condition 5"`
+}
+
+// NConds returns the number of conditions in this Run
+func (rn *Run) NConds() int {
+	switch {
+	case rn.Cond5 != "":
+		return 5
+	case rn.Cond4 != "":
+		return 4
+	case rn.Cond3 != "":
+		return 3
+	case rn.Cond2 != "":
+		return 2
+	default:
+		return 1
+	}
+}
+
+// Cond returns the condition name and Condition at the given index
+func (rn *Run) Cond(cidx int) (string, *Condition) {
+	cnm := ""
+	switch cidx {
+	case 0:
+		cnm = rn.Cond1
+	case 1:
+		cnm = rn.Cond2
+	case 2:
+		cnm = rn.Cond3
+	case 3:
+		cnm = rn.Cond4
+	case 4:
+		cnm = rn.Cond5
+	}
+	return cnm, AllConditions[cnm]
 }

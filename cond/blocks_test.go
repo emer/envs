@@ -8,14 +8,21 @@ import (
 	"fmt"
 	"strings"
 	"testing"
+
+	"github.com/goki/ki/ints"
 )
 
 func TestCSContext(t *testing.T) {
 	css := make(map[string]int)
+	ctxs := make(map[string]int)
+	maxTicks := 0
 	for blnm, bl := range AllBlocks {
 		for _, trl := range bl {
 			cnt := css[trl.CS]
 			css[trl.CS] = cnt + 1
+			cnt = ctxs[trl.Context]
+			ctxs[trl.Context] = cnt + 1
+			maxTicks = ints.MaxInt(maxTicks, trl.NTicks)
 
 			if trl.CS == "" {
 				t.Errorf("CS is empty: %s   in block: %s  trial: %s\n", trl.CS, blnm, trl.Name)
@@ -47,12 +54,30 @@ func TestCSContext(t *testing.T) {
 			if strings.Contains(blnm, "_test") && !trl.Test {
 				fmt.Printf("_test Block name with Test = false in block: %s  trial: %s\n", blnm, trl.Name)
 			}
+			cs := trl.CS[0:1]
+			if _, ok := Stims[cs]; !ok {
+				t.Errorf("CS not found in list of Stims: %s\n", cs)
+			}
+			if len(trl.CS) > 1 {
+				cs = trl.CS[1:2]
+				if _, ok := Stims[cs]; !ok {
+					t.Errorf("CS2 not found in list of Stims: %s\n", cs)
+				}
+			}
+			if _, ok := Contexts[trl.Context]; !ok {
+				t.Errorf("Context not found in list of Contexts: %s\n", trl.Context)
+			}
 		}
 	}
 	fmt.Printf("\nList of unique CSs and use count:\n")
 	for cs, cnt := range css {
 		fmt.Printf("%s \t %d\n", cs, cnt)
 	}
+	fmt.Printf("\nList of unique Contexts and use count:\n")
+	for ctx, cnt := range ctxs {
+		fmt.Printf("%s \t %d\n", ctx, cnt)
+	}
+	fmt.Printf("MaxTicks: %d\n", maxTicks)
 }
 
 func TestConds(t *testing.T) {
