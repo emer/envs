@@ -8,8 +8,8 @@ package cond
 type Condition struct {
 	Name          string `desc:"identifier for this type of configuration"`
 	Desc          string `desc:"description of this configuration"`
-	Block         string `desc:"type of block to run"`
-	FixedProb     bool   `desc:"fixed probability for each trial group"`
+	Block         string `desc:"type of block to run -- must be listed in AllBlocks"`
+	FixedProb     bool   `desc:"use a permuted list to ensure an exact number of trials have US -- else random draw each time"`
 	NIters        int    `desc:"number of iterations to run"`
 	BlocksPerIter int    `desc:"number of blocks (1 block = one behavioral trial = sequence of CS, US) in each iteration -- needs to be higher if there are stochastic variables (probabilities)."`
 	Permute       bool   `desc:"permute list of fully-instantiated trials after generation"`
