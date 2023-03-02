@@ -34,6 +34,7 @@ type CondEnv struct {
 	Trial       env.Ctr `inactive:"+" view:"inline" desc:"counter of behavioral trials within a Block"`
 	Tick        env.Ctr `inactive:"+" view:"inline" desc:"counter of discrete steps within a behavioral trial -- typically maps onto Alpha / Theta cycle in network"`
 	TrialName   string  `inactive:"+" desc:"name of current trial step"`
+	TrialType   string  `inactive:"+" desc:"type of current trial step"`
 	USTimeInStr string  `inactive:"+" desc:"decoded value of USTimeIn"`
 
 	Trials    []*Trial                    `desc:"current generated set of trials per Block"`
@@ -154,6 +155,7 @@ func (ev *CondEnv) RenderTrial(trli, tick int) {
 	ev.CurTrial = *trl
 
 	ev.TrialName = fmt.Sprintf("%s_%d", trl.CS, tick)
+	ev.TrialType = ev.CurTrial.Name
 
 	stim := ev.CurStates["StimIn"]
 	ctxt := ev.CurStates["ContextIn"]
