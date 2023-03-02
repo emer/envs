@@ -156,10 +156,10 @@ func SetUSTime(tsr *etensor.Float32, nyrep, stidx, tick, start, end int) bool {
 }
 
 // SetPV sets PV input
-func SetPV(tsr *etensor.Float32, nyrep int, pv int) {
+func SetPV(tsr *etensor.Float32, nyrep int, pv int, mag float32) {
 	idx := []int{0, pv, 0, 0}
 	for y := 0; y < nyrep; y++ {
 		idx[2] = y
-		tsr.Set(idx, 1)
+		tsr.Set(idx, mag)
 	}
 }

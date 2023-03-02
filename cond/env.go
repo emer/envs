@@ -36,8 +36,8 @@ type CondEnv struct {
 	TrialName   string  `inactive:"+" desc:"name of current trial step"`
 	USTimeInStr string  `inactive:"+" desc:"decoded value of USTimeIn"`
 
-	Trials []*Trial `desc:"current generated set of trials per Block"`
-
+	Trials    []*Trial                    `desc:"current generated set of trials per Block"`
+	CurTrial  Trial                       `desc:"copy of info for current trial"`
 	CurStates map[string]*etensor.Float32 `desc:"current rendered state tensors -- extensible map"`
 }
 
@@ -151,6 +151,7 @@ func (ev *CondEnv) RenderTrial(trli, tick int) {
 		tsr.SetZeros()
 	}
 	trl := ev.Trials[trli]
+	ev.CurTrial = *trl
 
 	ev.TrialName = fmt.Sprintf("%s_%d", trl.CS, tick)
 
@@ -182,13 +183,15 @@ func (ev *CondEnv) RenderTrial(trli, tick int) {
 		SetUSTime(time, ev.NYReps, NStims-1, MaxTime, 0, MaxTime)
 	}
 
+	ev.CurTrial.USOn = false
 	if trl.USOn && (tick >= trl.USStart) && (tick <= trl.USEnd) {
+		ev.CurTrial.USOn = true
 		if trl.Valence == Pos {
-			SetPV(ev.CurStates["PosPV"], ev.NYReps, trl.US)
+			SetPV(ev.CurStates["PosPV"], ev.NYReps, trl.US, trl.USMag)
 			ev.TrialName += fmt.Sprintf("_Pos%d", trl.US)
 		}
 		if trl.Valence == Neg || trl.MixedUS {
-			SetPV(ev.CurStates["NegPV"], ev.NYReps, trl.US)
+			SetPV(ev.CurStates["NegPV"], ev.NYReps, trl.US, trl.USMag)
 			ev.TrialName += fmt.Sprintf("_Neg%d", trl.US)
 		}
 	}
