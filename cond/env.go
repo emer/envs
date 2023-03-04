@@ -65,6 +65,7 @@ func (ev *CondEnv) Config(rmax int, rnm string) {
 	copy(ustsh, USTimeShape)
 	ustsh[2] = ev.NYReps
 	ev.CurStates["USTimeIn"] = etensor.NewFloat32(ustsh, nil, nil)
+	ev.CurStates["Time"] = etensor.NewFloat32([]int{1, MaxTime, ev.NYReps, 1}, nil, nil)
 	pvsh := []int{PVShape[0], PVShape[1], ev.NYReps, 1}
 	ev.CurStates["PosPV"] = etensor.NewFloat32(pvsh, nil, nil)
 	ev.CurStates["NegPV"] = etensor.NewFloat32(pvsh, nil, nil)
@@ -159,16 +160,20 @@ func (ev *CondEnv) RenderTrial(trli, tick int) {
 
 	stim := ev.CurStates["StimIn"]
 	ctxt := ev.CurStates["ContextIn"]
-	time := ev.CurStates["USTimeIn"]
+	ustime := ev.CurStates["USTimeIn"]
+	time := ev.CurStates["Time"]
+	SetTime(time, ev.NYReps, tick)
 	if tick >= trl.CSStart && tick <= trl.CSEnd {
+		ev.CurTrial.CSOn = true
 		cs := trl.CS[0:1]
 		stidx := SetStim(stim, ev.NYReps, cs)
-		SetUSTime(time, ev.NYReps, stidx, tick, trl.CSStart, trl.CSEnd)
+		SetUSTime(ustime, ev.NYReps, stidx, tick, trl.CSStart, trl.CSEnd)
 	}
 	if (len(trl.CS) > 1) && (tick >= trl.CS2Start) && (tick <= trl.CS2End) {
+		ev.CurTrial.CSOn = true
 		cs := trl.CS[1:2]
 		stidx := SetStim(stim, ev.NYReps, cs)
-		SetUSTime(time, ev.NYReps, stidx, tick, trl.CSStart, trl.CSEnd)
+		SetUSTime(ustime, ev.NYReps, stidx, tick, trl.CSStart, trl.CSEnd)
 	}
 	minStart := trl.CSStart
 	if trl.CS2Start > 0 {
@@ -182,7 +187,7 @@ func (ev *CondEnv) RenderTrial(trli, tick int) {
 
 	if tick == maxEnd+1 {
 		// use last stimulus for US off signal
-		SetUSTime(time, ev.NYReps, NStims-1, MaxTime, 0, MaxTime)
+		SetUSTime(ustime, ev.NYReps, NStims-1, MaxTime, 0, MaxTime)
 	}
 
 	ev.CurTrial.USOn = false

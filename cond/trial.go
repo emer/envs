@@ -52,6 +52,7 @@ type Trial struct {
 
 	// The following are set for generated trials:
 	USOn bool `desc:"for rendered trials, true if US active"`
+	CSOn bool `desc:"for rendered trials, true if CS active"`
 }
 
 // Block represents a set of trial types
