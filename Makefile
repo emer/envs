@@ -62,7 +62,7 @@ gopath-update:
 	cd buildtst; go get -u ./...
 
 # NOTE: MUST update version number here prior to running 'make release'
-VERS=v1.0.2
+VERS=v1.0.3
 PACKAGE=envs
 GIT_COMMIT=`git rev-parse --short HEAD`
 VERS_DATE=`date -u +%Y-%m-%d\ %H:%M`
