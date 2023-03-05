@@ -5,6 +5,15 @@
 package cond
 
 var AllConditions = map[string]*Condition{
+	"PosAcq": {
+		Name:      "PosAcq",
+		Desc:      "Standard positive valence acquisition: A = 100%",
+		Block:     "PosAcq",
+		FixedProb: true,
+		NBlocks:   51,
+		NTrials:   4,
+		Permute:   true,
+	},
 	"PosAcq_B50": {
 		Name:      "PosAcq_B50",
 		Desc:      "Standard positive valence acquisition: A = 100%, B = 50%",

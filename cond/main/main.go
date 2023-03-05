@@ -97,7 +97,7 @@ func (ss *Sim) ConfigGui() *gi.Window {
 	ss.Grids = tv.AddNewTab(gi.KiT_Layout, "Grids").(*gi.Layout)
 	ss.Grids.Lay = gi.LayoutVert
 
-	ss.GridNames = []string{"StimIn", "ContextIn", "PosPV", "NegPV", "USTimeIn"}
+	ss.GridNames = []string{"StimIn", "ContextIn", "PosUS", "NegUS", "USTimeIn"}
 	for _, gr := range ss.GridNames {
 		tg := &etview.TensorGrid{}
 		tg.SetName(gr)

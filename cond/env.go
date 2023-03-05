@@ -66,9 +66,9 @@ func (ev *CondEnv) Config(rmax int, rnm string) {
 	ustsh[2] = ev.NYReps
 	ev.CurStates["USTimeIn"] = etensor.NewFloat32(ustsh, nil, nil)
 	ev.CurStates["Time"] = etensor.NewFloat32([]int{1, MaxTime, ev.NYReps, 1}, nil, nil)
-	pvsh := []int{PVShape[0], PVShape[1], ev.NYReps, 1}
-	ev.CurStates["PosPV"] = etensor.NewFloat32(pvsh, nil, nil)
-	ev.CurStates["NegPV"] = etensor.NewFloat32(pvsh, nil, nil)
+	ussh := []int{USShape[0], USShape[1], ev.NYReps, 1}
+	ev.CurStates["USpos"] = etensor.NewFloat32(ussh, nil, nil)
+	ev.CurStates["USneg"] = etensor.NewFloat32(ussh, nil, nil)
 }
 
 func (ev *CondEnv) Validate() error {
@@ -194,11 +194,11 @@ func (ev *CondEnv) RenderTrial(trli, tick int) {
 	if trl.USOn && (tick >= trl.USStart) && (tick <= trl.USEnd) {
 		ev.CurTrial.USOn = true
 		if trl.Valence == Pos {
-			SetPV(ev.CurStates["PosPV"], ev.NYReps, trl.US, trl.USMag)
+			SetUS(ev.CurStates["USpos"], ev.NYReps, trl.US, trl.USMag)
 			ev.TrialName += fmt.Sprintf("_Pos%d", trl.US)
 		}
 		if trl.Valence == Neg || trl.MixedUS {
-			SetPV(ev.CurStates["NegPV"], ev.NYReps, trl.US, trl.USMag)
+			SetUS(ev.CurStates["USneg"], ev.NYReps, trl.US, trl.USMag)
 			ev.TrialName += fmt.Sprintf("_Neg%d", trl.US)
 		}
 	}

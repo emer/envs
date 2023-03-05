@@ -19,6 +19,11 @@ func init() {
 }
 
 var AllRuns = map[string]Run{
+	"PosAcq": {
+		Name:  "PosAcq",
+		Desc:  "Standard positive valence acquisition: A = 100%",
+		Cond1: "PosAcq",
+	},
 	"PosAcq_B50": {
 		Name:  "PosAcq_B50",
 		Desc:  "Standard positive valence acquisition: A = 100%, B = 50%",

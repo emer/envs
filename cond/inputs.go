@@ -7,13 +7,13 @@ package cond
 import "github.com/emer/etable/etensor"
 
 var (
-	NPVs = 4
+	NUSs = 4
 
 	NStims = 12
 
 	MaxTime = 6
 
-	PVShape = []int{1, NPVs}
+	USShape = []int{1, NUSs}
 
 	StimShape = []int{3, 4}
 
@@ -22,7 +22,7 @@ var (
 	// USTimeShape is overall shape of USTime
 	USTimeShape = []int{StimShape[0], StimShape[1], 1, MaxTime}
 
-	// USTimeOff is activated when the PV goes off
+	// USTimeOff is activated when the US goes off
 	USTimeOff = []int{StimShape[0] - 1, StimShape[1] - 1, 0, 5}
 
 	// Stims maps stimuli to indexes for input layer
@@ -164,8 +164,8 @@ func SetTime(tsr *etensor.Float32, nyrep int, tick int) {
 	}
 }
 
-// SetPV sets PV input
-func SetPV(tsr *etensor.Float32, nyrep int, pv int, mag float32) {
+// SetUS sets US input
+func SetUS(tsr *etensor.Float32, nyrep int, pv int, mag float32) {
 	idx := []int{0, pv, 0, 0}
 	for y := 0; y < nyrep; y++ {
 		idx[2] = y
