@@ -104,6 +104,15 @@ var AllConditions = map[string]*Condition{
 		NTrials:   8,
 		Permute:   true,
 	},
+	"PosExtinct_AB": {
+		Name:      "PosExtinct_AB",
+		Desc:      "Pavlovian extinction: A_NR_Pos, B_NR_Pos",
+		Block:     "PosExtinct_AB",
+		FixedProb: false,
+		NBlocks:   50,
+		NTrials:   8,
+		Permute:   true,
+	},
 	"PosCondInhib": {
 		Name:      "PosCondInhib",
 		Desc:      "conditioned inhibition training: AX_NR_Pos, A_R_Pos interleaved",

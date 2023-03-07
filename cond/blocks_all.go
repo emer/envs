@@ -957,6 +957,26 @@ var AllBlocks = map[string]Block{
 	"PosExtinct": {
 		{
 			Name:     "A_NR",
+			Pct:      1,
+			Valence:  Pos,
+			USProb:   0,
+			MixedUS:  false,
+			USMag:    1,
+			NTicks:   5,
+			CS:       "A",
+			CSStart:  1,
+			CSEnd:    3,
+			CS2Start: -1,
+			CS2End:   -1,
+			US:       0,
+			USStart:  3,
+			USEnd:    3,
+			Context:  "A",
+		},
+	},
+	"PosExtinct_AB": {
+		{
+			Name:     "A_NR",
 			Pct:      0.5,
 			Valence:  Pos,
 			USProb:   0,

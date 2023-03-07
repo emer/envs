@@ -24,10 +24,26 @@ var AllRuns = map[string]Run{
 		Desc:  "Standard positive valence acquisition: A = 100%",
 		Cond1: "PosAcq",
 	},
+	"PosExtinct": {
+		Name:  "PosExtinct",
+		Desc:  "extinguish positive valence: A_NR_Pos",
+		Cond1: "PosExtinct",
+	},
+	"PosAcq_Ext": {
+		Name:  "PosAcq",
+		Desc:  "Standard positive valence acquisition: A = 100%",
+		Cond1: "PosAcq",
+		Cond2: "PosExtinct",
+	},
 	"PosAcq_B50": {
 		Name:  "PosAcq_B50",
 		Desc:  "Standard positive valence acquisition: A = 100%, B = 50%",
 		Cond1: "PosAcq_B50",
+	},
+	"PosExtinct_AB": {
+		Name:  "PosExtinct_AB",
+		Desc:  "extinguish positive valence: A_NR_Pos, B_NR_Pos",
+		Cond1: "PosExtinct_AB",
 	},
 	"PosAcq_A50": {
 		Name:  "PosAcq_A50",
