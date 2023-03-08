@@ -38,6 +38,7 @@ type CondEnv struct {
 	USTimeInStr string  `inactive:"+" desc:"decoded value of USTimeIn"`
 
 	Trials    []*Trial                    `desc:"current generated set of trials per Block"`
+	CurRun    Run                         `desc:"copy of current run parameters"`
 	CurTrial  Trial                       `desc:"copy of info for current trial"`
 	CurStates map[string]*etensor.Float32 `desc:"current rendered state tensors -- extensible map"`
 }
@@ -78,6 +79,7 @@ func (ev *CondEnv) Validate() error {
 // Init sets current run index and max
 func (ev *CondEnv) Init(ridx int) {
 	run := AllRuns[ev.RunName]
+	ev.CurRun = *run
 	ev.Run.Set(ridx)
 	ev.Condition.Init()
 	ev.Condition.Max = run.NConds()

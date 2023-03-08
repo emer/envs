@@ -18,7 +18,7 @@ func init() {
 	sort.Strings(RunNames)
 }
 
-var AllRuns = map[string]Run{
+var AllRuns = map[string]*Run{
 	"PosAcq": {
 		Name:  "PosAcq",
 		Desc:  "Standard positive valence acquisition: A = 100%",
@@ -26,8 +26,14 @@ var AllRuns = map[string]Run{
 	},
 	"PosExtinct": {
 		Name:  "PosExtinct",
-		Desc:  "extinguish positive valence: A_NR_Pos",
+		Desc:  "extinguish positive valence: A_NR_Pos -- typically use after some amount of PosAcq",
 		Cond1: "PosExtinct",
+	},
+	"PosAcq_ExtinctWts": {
+		Name:    "PosExtinct_Wts",
+		Desc:    "Load weights of acquisition, go directly to extinguish -- must save weights from PosAcq first as wts/PosAcq.wts.gz",
+		Weights: "PosAcq",
+		Cond1:   "PosExtinct",
 	},
 	"PosAcq_Ext": {
 		Name:  "PosAcq",
@@ -55,12 +61,6 @@ var AllRuns = map[string]Run{
 		Desc:  "Acquire, extinguish",
 		Cond1: "PosAcq_B50",
 		Cond2: "PosExtinct",
-	},
-	"PosAcq_B50ExtFast": {
-		Name:    "PosAcq_B50Ext",
-		Desc:    "Load weights of acquisition, go directly to extinguish -- must run PosAcq_B50 first to get weights",
-		Weights: "PosAcq_B50",
-		Cond1:   "PosExtinct",
 	},
 	"PosAcq_B50ExtAcq": {
 		Name:  "PosAcq_B50ExtAcq",
