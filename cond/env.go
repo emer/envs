@@ -84,6 +84,7 @@ func (ev *CondEnv) Init(ridx int) {
 	ev.Condition.Init()
 	ev.Condition.Max = run.NConds()
 	ev.InitCond()
+	ev.Tick.Cur = -1
 }
 
 // InitCond initializes for current condition index
@@ -101,7 +102,6 @@ func (ev *CondEnv) InitCond() {
 	ev.Tick.Init()
 	trl := ev.Trials[0]
 	ev.Tick.Max = trl.NTicks
-	ev.Tick.Cur = -1
 }
 
 func (ev *CondEnv) State(element string) etensor.Tensor {
@@ -119,8 +119,8 @@ func (ev *CondEnv) Step() bool {
 					if ev.Run.Incr() {
 						return false
 					}
-					ev.InitCond()
 				}
+				ev.InitCond()
 			}
 		}
 		trl := ev.Trials[ev.Trial.Cur]

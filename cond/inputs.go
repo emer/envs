@@ -157,6 +157,9 @@ func SetUSTime(tsr *etensor.Float32, nyrep, stidx, tick, start, end int) bool {
 
 // SetTime sets Time input
 func SetTime(tsr *etensor.Float32, nyrep int, tick int) {
+	if tick < 0 {
+		tick = 0
+	}
 	idx := []int{0, tick, 0, 0}
 	for y := 0; y < nyrep; y++ {
 		idx[2] = y
