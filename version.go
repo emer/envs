@@ -3,7 +3,7 @@
 package envs
 
 const (
-	Version     = "v1.0.3"
-	GitCommit   = "9353f3a"          // the commit JUST BEFORE the release
-	VersionDate = "2023-03-05 11:23" // UTC
+	Version     = "v1.0.4"
+	GitCommit   = "999b931"          // the commit JUST BEFORE the release
+	VersionDate = "2023-03-14 01:52" // UTC
 )
