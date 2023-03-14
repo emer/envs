@@ -59,7 +59,7 @@ func (ev *CondEnv) Config(rmax int, rnm string) {
 	ev.CurStates = make(map[string]*etensor.Float32)
 
 	stsh := []int{StimShape[0], StimShape[1], ev.NYReps, 1}
-	ev.CurStates["StimIn"] = etensor.NewFloat32(stsh, nil, nil)
+	ev.CurStates["CS"] = etensor.NewFloat32(stsh, nil, nil)
 	ctsh := []int{ContextShape[0], ContextShape[1], ev.NYReps, 1}
 	ev.CurStates["ContextIn"] = etensor.NewFloat32(ctsh, nil, nil)
 	ustsh := make([]int, 4)
@@ -160,7 +160,7 @@ func (ev *CondEnv) RenderTrial(trli, tick int) {
 	ev.TrialName = fmt.Sprintf("%s_%d", trl.CS, tick)
 	ev.TrialType = ev.CurTrial.Name
 
-	stim := ev.CurStates["StimIn"]
+	stim := ev.CurStates["CS"]
 	ctxt := ev.CurStates["ContextIn"]
 	ustime := ev.CurStates["USTimeIn"]
 	time := ev.CurStates["Time"]

@@ -54,7 +54,7 @@ func (ss *Sim) Config() {
 
 func (ss *Sim) UpdateGrids() {
 	for i := range ss.GridNames {
-		tg := ss.Grids.Child(i*3 + 1).(*etview.TensorGrid)
+		tg := ss.Grids.Child(i*2 + 1).(*etview.TensorGrid)
 		tg.UpdateSig()
 	}
 }
@@ -95,9 +95,10 @@ func (ss *Sim) ConfigGui() *gi.Window {
 
 	tv := gi.AddNewTabView(split, "tv")
 	ss.Grids = tv.AddNewTab(gi.KiT_Layout, "Grids").(*gi.Layout)
-	ss.Grids.Lay = gi.LayoutVert
-
-	ss.GridNames = []string{"StimIn", "ContextIn", "PosUS", "NegUS", "USTimeIn"}
+	ss.Grids.Lay = gi.LayoutGrid
+	ss.Grids.SetPropInt("columns", 4)
+	ss.Grids.SetStretchMax()
+	ss.GridNames = []string{"USpos", "USneg", "CS", "ContextIn", "USTimeIn"}
 	for _, gr := range ss.GridNames {
 		tg := &etview.TensorGrid{}
 		tg.SetName(gr)
@@ -105,7 +106,7 @@ func (ss *Sim) ConfigGui() *gi.Window {
 		ss.Grids.AddChild(tg)
 		tg.SetTensor(ss.Env.State(gr))
 		tg.Disp.Range.FixMax = true
-		gi.AddNewSpace(ss.Grids, gr+"_spc")
+		// gi.AddNewSpace(ss.Grids, gr+"_spc")
 		tg.SetStretchMax()
 	}
 

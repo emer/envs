@@ -88,3 +88,19 @@ func TestConds(t *testing.T) {
 		}
 	}
 }
+
+func TestRuns(t *testing.T) {
+	for rnm, run := range AllRuns {
+		nc := run.NConds()
+		if nc == 0 {
+			t.Errorf("Run name: %s has no Conds\n", rnm)
+		}
+		for i := 0; i < nc; i++ {
+			cnm, _ := run.Cond(i)
+			_, ok := AllConditions[cnm]
+			if !ok {
+				t.Errorf("Run: %s Condition name: %s number: %d not found\n", rnm, cnm, i)
+			}
+		}
+	}
+}
