@@ -762,7 +762,7 @@ func (ev *XYHDEnv) ActGen() int {
 
 	rlp := float64(.5)
 	rlact := left
-	if erand.BoolProb(rlp, -1) {
+	if erand.BoolP(rlp, -1) {
 		rlact = right
 	}
 	rlps := fmt.Sprintf("%.3g", rlp)

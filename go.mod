@@ -4,9 +4,9 @@ go 1.18
 
 require (
 	github.com/anthonynsimon/bild v0.13.0
-	github.com/emer/emergent v1.3.45
+	github.com/emer/emergent v1.3.48
 	github.com/emer/empi v1.0.17
-	github.com/emer/etable v1.1.17
+	github.com/emer/etable v1.1.18
 	github.com/emer/leabra v1.2.7
 	github.com/emer/vision v1.1.18
 	github.com/goki/gi v1.3.16
@@ -41,7 +41,7 @@ require (
 	github.com/go-pdf/fpdf v0.6.0 // indirect
 	github.com/goki/freetype v0.0.0-20220119013949-7a161fd3728c // indirect
 	github.com/goki/go-difflib v1.2.1 // indirect
-	github.com/goki/gosl v1.0.11 // indirect
+	github.com/goki/gosl v1.0.12 // indirect
 	github.com/goki/kigen v1.0.2 // indirect
 	github.com/goki/pi v1.0.27 // indirect
 	github.com/goki/prof v1.0.0 // indirect

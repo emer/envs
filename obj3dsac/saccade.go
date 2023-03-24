@@ -255,7 +255,7 @@ func (sc *Saccade) LimitSac(sacDev, start, objPos, objVel, trials float32) float
 // NextTraj computes the next object position and trajectory, at start of a new object sequence
 func (sc *Saccade) NextTraj() {
 	sc.TrajLen = sc.TrajLenRange.Min + rand.Intn(sc.TrajLenRange.Range()+1)
-	zeroVel := erand.BoolProb(sc.ZeroVelP, -1)
+	zeroVel := erand.BoolP(sc.ZeroVelP, -1)
 	if sc.RandObjPos {
 		// note: resetting object position disrupts predictability..
 		sc.ObjPosNext.X = sc.World.Min + rand.Float32()*sc.World.Range()

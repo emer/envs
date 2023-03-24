@@ -1036,7 +1036,7 @@ func (ev *FWorld) ActGen() int {
 		rlp = float64(lpow / (rpow + lpow))
 	}
 	rlact := left
-	if erand.BoolProb(rlp, -1) {
+	if erand.BoolP(rlp, -1) {
 		rlact = right
 	}
 	// fmt.Printf("rlp: %.3g  ldf: %.3g  rdf: %.3g  act: %s\n", rlp, ldf, rdf, ev.Acts[rlact])

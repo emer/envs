@@ -107,7 +107,7 @@ func GenerateTrials(condNm string) []*Trial {
 			trlNm := trl.Name + "_" + trl.Valence.String()
 			usOn := false
 			if !useIsOnList {
-				usOn = erand.BoolP(trl.USProb)
+				usOn = erand.BoolP32(trl.USProb, -1)
 			} else {
 				usOn = usIsOn[ri]
 			}

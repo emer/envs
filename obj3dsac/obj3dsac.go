@@ -167,7 +167,7 @@ func (ob *Obj3DSac) OpenObj(obj string) error {
 	// zoff := float32(ob.Objs.ObjCatProps.CellFloat("z_offset", crow))
 	ymirv := ob.Objs.ObjCatProps.CellFloat("y_rot_mirror", crow)
 	ymir := ymirv != 0
-	yflip := erand.BoolProb(.5, -1)
+	yflip := erand.BoolP(.5, -1)
 	if ymir && yflip {
 		ob.InitRot.Y = 180
 	} else {
