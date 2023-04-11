@@ -5,7 +5,7 @@
 package cond
 
 var AllBlocks = map[string]Block{
-	"PosAcq": {
+	"PosAcq_A100": {
 		{
 			Name:     "A_R",
 			Pct:      1,
@@ -25,7 +25,7 @@ var AllBlocks = map[string]Block{
 			Context:  "A",
 		},
 	},
-	"PosAcq_B50": {
+	"PosAcq_A100B50": {
 		{
 			Name:     "A_R",
 			Pct:      0.5,
@@ -63,12 +63,12 @@ var AllBlocks = map[string]Block{
 			Context:  "B",
 		},
 	},
-	"USDebug": {
+	"PosAcq_A100B0": {
 		{
 			Name:     "A_R",
-			Pct:      1.0,
+			Pct:      0.5,
 			Valence:  Pos,
-			USProb:   1.0,
+			USProb:   1,
 			MixedUS:  false,
 			USMag:    1,
 			NTicks:   5,
@@ -81,6 +81,24 @@ var AllBlocks = map[string]Block{
 			USStart:  3,
 			USEnd:    3,
 			Context:  "A",
+		},
+		{
+			Name:     "B_NR",
+			Pct:      0.5,
+			Valence:  Pos,
+			USProb:   0.0,
+			MixedUS:  false,
+			USMag:    1,
+			NTicks:   5,
+			CS:       "B",
+			CSStart:  1,
+			CSEnd:    3,
+			CS2Start: -1,
+			CS2End:   -1,
+			US:       0,
+			USStart:  3,
+			USEnd:    3,
+			Context:  "B",
 		},
 	},
 	"PosAcq_A50": {
@@ -123,9 +141,9 @@ var AllBlocks = map[string]Block{
 			Context:  "A",
 		},
 	},
-	"PosReacq": {
+	"PosReAcq_A100B50": {
 		{
-			Name:     "A_R_reacq",
+			Name:     "A_R_re",
 			Pct:      1,
 			Valence:  Pos,
 			USProb:   1,
@@ -199,7 +217,7 @@ var AllBlocks = map[string]Block{
 			Context:  "B",
 		},
 	},
-	"PosAcq_B100": {
+	"PosAcq_A100B100": {
 		{
 			Name:     "A_R",
 			Pct:      0.5,
@@ -237,7 +255,7 @@ var AllBlocks = map[string]Block{
 			Context:  "B",
 		},
 	},
-	"PosAcq_B25": {
+	"PosAcq_A100B25": {
 		{
 			Name:     "A_R",
 			Pct:      0.5,
@@ -954,7 +972,7 @@ var AllBlocks = map[string]Block{
 			Context:  "E",
 		},
 	},
-	"PosExtinct": {
+	"PosExt_A0": {
 		{
 			Name:     "A_NR",
 			Pct:      1,
@@ -974,7 +992,7 @@ var AllBlocks = map[string]Block{
 			Context:  "A",
 		},
 	},
-	"PosExtinct_AB": {
+	"PosExt_A0B0": {
 		{
 			Name:     "A_NR",
 			Pct:      0.5,

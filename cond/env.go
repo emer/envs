@@ -28,6 +28,8 @@ type CondEnv struct {
 	Dsc         string  `desc:"description of this environment"`
 	NYReps      int     `desc:"number of Y repetitions for localist reps"`
 	RunName     string  `desc:"current run name"`
+	RunDesc     string  `desc:"description of current run"`
+	CondDesc    string  `desc:"description of current condition"`
 	Run         env.Ctr `inactive:"+" view:"inline" desc:"counter over runs"`
 	Condition   env.Ctr `inactive:"+" view:"inline" desc:"counter over Condition within a run -- Max depends on number of conditions specified in given Run"`
 	Block       env.Ctr `inactive:"+" view:"inline" desc:"counter over full blocks of all trial types within a Condition -- like an Epoch"`
@@ -80,6 +82,7 @@ func (ev *CondEnv) Validate() error {
 func (ev *CondEnv) Init(ridx int) {
 	run := AllRuns[ev.RunName]
 	ev.CurRun = *run
+	ev.RunDesc = run.Desc
 	ev.Run.Set(ridx)
 	ev.Condition.Init()
 	ev.Condition.Max = run.NConds()
@@ -90,10 +93,11 @@ func (ev *CondEnv) Init(ridx int) {
 // InitCond initializes for current condition index
 func (ev *CondEnv) InitCond() {
 	if ev.RunName == "" {
-		ev.RunName = "PosAcq_B50"
+		ev.RunName = "PosAcq_A100B50"
 	}
 	run := AllRuns[ev.RunName]
 	cnm, cond := run.Cond(ev.Condition.Cur)
+	ev.CondDesc = cond.Desc
 	ev.Block.Init()
 	ev.Block.Max = cond.NBlocks
 	ev.Trial.Init()

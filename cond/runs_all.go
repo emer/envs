@@ -19,66 +19,71 @@ func init() {
 }
 
 var AllRuns = map[string]*Run{
-	"PosAcq": {
-		Name:  "PosAcq",
+	"PosAcq_A100": {
+		Name:  "PosAcq_A100",
 		Desc:  "Standard positive valence acquisition: A = 100%",
-		Cond1: "PosAcq",
+		Cond1: "PosAcq_A100",
 	},
-	"PosExtinct": {
-		Name:  "PosExtinct",
-		Desc:  "extinguish positive valence: A_NR_Pos -- typically use after some amount of PosAcq",
-		Cond1: "PosExtinct",
+	"PosExt_A0": {
+		Name:  "PosExt_A0",
+		Desc:  "extinguish positive valence: A_NR_Pos -- typically use after some amount of PosAcq_A100",
+		Cond1: "PosExt_A0",
 	},
-	"PosAcq_ExtinctWts": {
-		Name:    "PosExtinct_Wts",
-		Desc:    "Load weights of acquisition, go directly to extinguish -- must save weights from PosAcq first as wts/PosAcq.wts.gz",
-		Weights: "PosAcq",
-		Cond1:   "PosExtinct",
+	"PosAcqExt_A100Wts_A0": {
+		Name:    "PosAcqExt_A100Wts_A0",
+		Desc:    "Load weights of acquisition A 100%, go directly to extinguish -- must save weights from PosAcq_A100 first",
+		Weights: "PosAcq_A100",
+		Cond1:   "PosExt_A0",
 	},
-	"PosAcq_Ext": {
+	"PosAcqExt_A100_A0": {
 		Name:  "PosAcq",
-		Desc:  "Standard positive valence acquisition: A = 100%",
-		Cond1: "PosAcq",
-		Cond2: "PosExtinct",
+		Desc:  "Standard positive valence acquisition: A = 100%, then extinction A0",
+		Cond1: "PosAcq_A100",
+		Cond2: "PosExt_A0",
 	},
-	"PosAcq_B50": {
-		Name:  "PosAcq_B50",
+	"PosAcq_A100B50": {
+		Name:  "PosAcq_A100B50",
 		Desc:  "Standard positive valence acquisition: A = 100%, B = 50%",
-		Cond1: "PosAcq_B50",
+		Cond1: "PosAcq_A100B50",
 	},
-	"PosExtinct_AB": {
-		Name:  "PosExtinct_AB",
+	"PosAcq_A100B0": {
+		Name:  "PosAcq_A100B0",
+		Desc:  "Standard positive valence acquisition: A = 100%, B = 0%",
+		Cond1: "PosAcq_A100B0",
+	},
+	"PosExt_A0B0": {
+		Name:  "PosExt_A0B0",
 		Desc:  "extinguish positive valence: A_NR_Pos, B_NR_Pos",
-		Cond1: "PosExtinct_AB",
+		Cond1: "PosExt_A0B0",
 	},
 	"PosAcq_A50": {
 		Name:  "PosAcq_A50",
 		Desc:  "A = 50%, B = 50%",
 		Cond1: "PosAcq_A50",
 	},
-	"PosAcq_B50Ext": {
-		Name:  "PosAcq_B50Ext",
-		Desc:  "Acquire, extinguish",
-		Cond1: "PosAcq_B50",
-		Cond2: "PosExtinct",
+	"PosAcqExt_A100B50_A0B0": {
+		Name:  "PosAcqExt_A00B50_A0B0",
+		Desc:  "positive valence acquisition A=100%, B=50%, then extinguish A, B = 0%",
+		Cond1: "PosAcq_A100B50",
+		Cond2: "PosExt_A0B0",
 	},
-	"PosAcq_B50ExtAcq": {
-		Name:  "PosAcq_B50ExtAcq",
-		Desc:  "Full cycle: acq, ext, acq",
-		Cond1: "PosAcq_B50",
-		Cond2: "PosExtinct",
-		Cond3: "PosAcq_B50Cont",
+	"PosAcqExtAcq_A100B50_A0B0_A100B50": {
+		Name:  "PosAcqExtAcq_A100B50_A0B0_A100B50",
+		Desc:  "Full cycle: acq, ext, acq, A=100%, B=50%, then extinguish, then acq again, marked as ReAcq",
+		Cond1: "PosAcq_A100B50",
+		Cond2: "PosExt_A0B0",
+		Cond3: "PosReAcq_A100B50",
 	},
-	"PosAcq_B100Ext": {
-		Name:  "PosAcq_B100Ext",
+	"PosAcqExt_A100B100": {
+		Name:  "PosAcqExt_A100B100",
 		Desc:  "",
-		Cond1: "PosAcq_B100",
-		Cond2: "PosExtinct",
+		Cond1: "PosAcq_A100B100",
+		Cond2: "PosExt_A0B0",
 	},
-	"PosAcq_B25": {
-		Name:  "PosAcq_B25",
+	"PosAcq_A100B25": {
+		Name:  "PosAcq_A100B25",
 		Desc:  "",
-		Cond1: "PosAcq_B25",
+		Cond1: "PosAcq_A100B25",
 	},
 	"NegAcq": {
 		Name:  "NegAcq",
@@ -205,7 +210,7 @@ var AllRuns = map[string]*Run{
 	"PosAcqEarlyUSTest": {
 		Name:  "PosAcqEarlyUSTest",
 		Desc:  "",
-		Cond1: "PosAcq_B50",
+		Cond1: "PosAcq_A100B50",
 		Cond2: "PosAcqEarlyUS_test",
 	},
 	"PosOrNegAcq": {
@@ -217,11 +222,6 @@ var AllRuns = map[string]*Run{
 		Name:  "PosCondInhib_test",
 		Desc:  "For debugging",
 		Cond1: "PosCondInhib_test",
-	},
-	"USDebug": {
-		Name:  "USDebug",
-		Desc:  "",
-		Cond1: "USDebug",
 	},
 	"US0": {
 		Name:  "US0",

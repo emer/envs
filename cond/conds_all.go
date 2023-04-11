@@ -5,19 +5,19 @@
 package cond
 
 var AllConditions = map[string]*Condition{
-	"PosAcq": {
-		Name:      "PosAcq",
+	"PosAcq_A100": {
+		Name:      "PosAcq_A100",
 		Desc:      "Standard positive valence acquisition: A = 100%",
-		Block:     "PosAcq",
+		Block:     "PosAcq_A100",
 		FixedProb: true,
 		NBlocks:   51,
 		NTrials:   4,
 		Permute:   true,
 	},
-	"PosAcq_B50": {
-		Name:      "PosAcq_B50",
+	"PosAcq_A100B50": {
+		Name:      "PosAcq_A100B50",
 		Desc:      "Standard positive valence acquisition: A = 100%, B = 50%",
-		Block:     "PosAcq_B50",
+		Block:     "PosAcq_A100B50",
 		FixedProb: true,
 		NBlocks:   51,
 		NTrials:   8,
@@ -25,7 +25,7 @@ var AllConditions = map[string]*Condition{
 	},
 	"PosAcq_A50": {
 		Name:      "PosAcq_A50",
-		Desc:      "Pavlovian conditioning w/ positively-valenced US: A_R_Pos at 50%",
+		Desc:      "Positive valence acquisition: A = 50%",
 		Block:     "PosAcq_A50",
 		FixedProb: true,
 		NBlocks:   51,
@@ -43,35 +43,26 @@ var AllConditions = map[string]*Condition{
 	},
 	"PosAcqPreSecondOrder": {
 		Name:      "PosAcqPreSecondOrder",
-		Desc:      "Pavlovian conditioning w/ positively-valenced US: A_R_Pos, B at 50%",
+		Desc:      "Positive valence acquisition: A_R_Pos, B at 50%",
 		Block:     "PosAcqPreSecondOrder",
 		FixedProb: true,
 		NBlocks:   51,
 		NTrials:   8,
 		Permute:   true,
 	},
-	"PosAcq_B50Cont": {
-		Name:      "PosAcq_B50Cont",
-		Desc:      "Pavlovian conditioning w/ positively-valenced US: A_R_Pos, B at 50% reinf, tags further learning as reacq",
-		Block:     "PosReacq",
+	"PosReAcq_A100B50": {
+		Name:      "PosReAcq_A100B50",
+		Desc:      "Positive valence acquisition: A_R_Pos, B at 50% reinf, tags further learning as reacq",
+		Block:     "PosReAcq_A100B50",
 		FixedProb: true,
 		NBlocks:   50,
 		NTrials:   8,
 		Permute:   true,
 	},
-	"PosAcq_B100": {
-		Name:      "PosAcq_B100",
-		Desc:      "Pavlovian conditioning w/ positively-valenced US: A_R_Pos, B at 100%",
-		Block:     "PosAcq_B100",
-		FixedProb: true,
-		NBlocks:   50,
-		NTrials:   8,
-		Permute:   true,
-	},
-	"PosAcq_B100Cont": {
-		Name:      "PosAcq_B100Cont",
-		Desc:      "Pavlovian conditioning w/ positively-valenced US: A_R_Pos -- continue w/ wts",
-		Block:     "PosAcq_B100",
+	"PosAcq_A100B100": {
+		Name:      "PosAcq_A100B100",
+		Desc:      "Positive valence acquisition: A_R_Pos, B at 100%",
+		Block:     "PosAcq_A100B100",
 		FixedProb: true,
 		NBlocks:   50,
 		NTrials:   8,
@@ -86,28 +77,37 @@ var AllConditions = map[string]*Condition{
 		NTrials:   2,
 		Permute:   false,
 	},
-	"PosAcq_B25": {
-		Name:      "PosAcq_B25",
-		Desc:      "Pavlovian conditioning w/ positively-valenced US: A_R_Pos",
-		Block:     "PosAcq_B25",
+	"PosAcq_A100B25": {
+		Name:      "PosAcq_A100B25",
+		Desc:      "Positive valence acquisition: A_R_Pos 100%, B at 25%",
+		Block:     "PosAcq_A100B25",
 		FixedProb: true,
 		NBlocks:   200,
 		NTrials:   8,
 		Permute:   true,
 	},
-	"PosExtinct": {
-		Name:      "PosExtinct",
-		Desc:      "Pavlovian extinction: A_NR_Pos",
-		Block:     "PosExtinct",
+	"PosAcq_A100B0": {
+		Name:      "PosAcq_A100B0",
+		Desc:      "Positive valence acquisition: A_R_Pos 100%, B at 0%",
+		Block:     "PosAcq_A100B0",
+		FixedProb: true,
+		NBlocks:   200,
+		NTrials:   8,
+		Permute:   true,
+	},
+	"PosExt_A0": {
+		Name:      "PosExt_A0",
+		Desc:      "Pavlovian extinction: A_NR_Pos, A = 0%",
+		Block:     "PosExt_A0",
 		FixedProb: false,
 		NBlocks:   50,
 		NTrials:   8,
 		Permute:   true,
 	},
-	"PosExtinct_AB": {
-		Name:      "PosExtinct_AB",
+	"PosExt_A0B0": {
+		Name:      "PosExt_A0B0",
 		Desc:      "Pavlovian extinction: A_NR_Pos, B_NR_Pos",
-		Block:     "PosExtinct_AB",
+		Block:     "PosExt_A0B0",
 		FixedProb: false,
 		NBlocks:   50,
 		NTrials:   8,
@@ -160,7 +160,7 @@ var AllConditions = map[string]*Condition{
 	},
 	"PosAcqOmit": {
 		Name:      "PosAcqOmit",
-		Desc:      "Pavlovian conditioning w/ positively-valenced US: A_R_Pos, A_NR_Pos trials, interleaved",
+		Desc:      "Positive valence acquisition: A_R_Pos, A_NR_Pos trials, interleaved",
 		Block:     "PosAcqOmit",
 		FixedProb: false,
 		NBlocks:   10,
@@ -196,7 +196,7 @@ var AllConditions = map[string]*Condition{
 	},
 	"PosAcq_cxA": {
 		Name:      "PosAcq_cxA",
-		Desc:      "Pavlovian conditioning w/ positively-valenced US: A_R_Pos, A_R_Pos_omit trials, interleaved",
+		Desc:      "Positive valence acquisition: A_R_Pos, A_R_Pos_omit trials, interleaved",
 		Block:     "PosAcq_cxA",
 		FixedProb: false,
 		NBlocks:   10,
@@ -205,7 +205,7 @@ var AllConditions = map[string]*Condition{
 	},
 	"PosExtinct_cxB": {
 		Name:      "PosExtinct_cxB",
-		Desc:      "Pavlovian conditioning w/ positively-valenced US: A_R_Pos, A_R_Pos_omit trials, interleaved",
+		Desc:      "Positive valence acquisition: A_R_Pos, A_R_Pos_omit trials, interleaved",
 		Block:     "PosExtinct_cxB",
 		FixedProb: false,
 		NBlocks:   25,
@@ -214,7 +214,7 @@ var AllConditions = map[string]*Condition{
 	},
 	"PosRenewal_cxA": {
 		Name:      "PosRenewal_cxA",
-		Desc:      "Pavlovian conditioning w/ positively-valenced US: A_R_Pos, A_R_Pos_omit trials, interleaved",
+		Desc:      "Positive valence acquisition: A_R_Pos, A_R_Pos_omit trials, interleaved",
 		Block:     "PosRenewal_cxA",
 		FixedProb: false,
 		NBlocks:   1,
@@ -471,15 +471,6 @@ var AllConditions = map[string]*Condition{
 		FixedProb: false,
 		NBlocks:   150,
 		NTrials:   6,
-		Permute:   true,
-	},
-	"USDebug": {
-		Name:      "USDebug",
-		Desc:      "For debugging, 100% reward, CS A",
-		Block:     "USDebug",
-		FixedProb: true,
-		NBlocks:   51,
-		NTrials:   8,
 		Permute:   true,
 	},
 }
