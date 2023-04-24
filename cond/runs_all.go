@@ -29,8 +29,8 @@ var AllRuns = map[string]*Run{
 		Desc:  "extinguish positive valence: A_NR_Pos -- typically use after some amount of PosAcq_A100",
 		Cond1: "PosExt_A0",
 	},
-	"PosAcqExt_A100Wts_A0": {
-		Name:    "PosAcqExt_A100Wts_A0",
+	"PosAcqExt_A100Wts": {
+		Name:    "PosAcqExt_A100Wts",
 		Desc:    "Load weights of acquisition A 100%, go directly to extinguish -- must save weights from PosAcq_A100 first",
 		Weights: "PosAcq_A100",
 		Cond1:   "PosExt_A0",
@@ -66,6 +66,12 @@ var AllRuns = map[string]*Run{
 		Desc:  "positive valence acquisition A=100%, B=50%, then extinguish A, B = 0%",
 		Cond1: "PosAcq_A100B50",
 		Cond2: "PosExt_A0B0",
+	},
+	"PosAcqExt_A100B50_Wts": {
+		Name:    "PosAcqExt_A100B50_A0B0_Wts",
+		Desc:    "Load weights of acquisition A = 100%, B = 50%, go directly to extinguish -- must save weights from PosAcq_A100B50",
+		Weights: "PosAcq_A100B50",
+		Cond1:   "PosExt_A0B0",
 	},
 	"PosAcqExtAcq_A100B50_A0B0_A100B50": {
 		Name:  "PosAcqExtAcq_A100B50_A0B0_A100B50",
