@@ -18,28 +18,72 @@ import (
 // Approach implements CS-guided approach to desired outcomes.
 // Each location contains a US which satisfies a different drive.
 type Approach struct {
-	Nm          string                      `desc:"name of environment -- Train or Test"`
-	Drives      int                         `desc:"number of different drive-like body states (hunger, thirst, etc), that are satisfied by a corresponding US outcome"`
-	CSPerDrive  int                         `desc:"number of different CS sensory cues associated with each US (simplest case is 1 -- one-to-one mapping), presented on a fovea input layer"`
-	Locations   int                         `desc:"number of different locations -- always <= number of drives -- drives have a unique location"`
-	DistMax     int                         `desc:"maximum distance in time steps to reach the US"`
-	TimeMax     int                         `desc:"maximum number of time steps before resetting"`
-	NewStateInt int                         `desc:"interval in trials for generating a new state, only if > 0"`
-	CSTot       int                         `desc:"total number of CS's = Drives * CSPerDrive"`
-	NYReps      int                         `desc:"number of Y-axis repetitions of localist stimuli -- for redundancy in spiking nets"`
-	PatSize     evec.Vec2i                  `desc:"size of CS patterns"`
-	Acts        []string                    `desc:"list of actions"`
-	ActMap      map[string]int              `desc:"action map of action names to indexes"`
-	States      map[string]*etensor.Float32 `desc:"named states -- e.g., USs, CSs, etc"`
-	TrgPos      int                         `desc:"target position where Drive US is"`
-	Drive       int                         `desc:"current drive state"`
-	Dist        int                         `desc:"current distance"`
-	Time        int                         `desc:"current time, counting up until starting over"`
-	Pos         int                         `desc:"current position being looked at"`
-	Rew         float32                     `desc:"reward"`
-	US          int                         `desc:"US is -1 unless consumed at Dist = 0"`
-	StateCtr    int                         `desc:"count up for generating a new state"`
-	LastAct     int                         `desc:"last action taken"`
+
+	// name of environment -- Train or Test
+	Nm string `desc:"name of environment -- Train or Test"`
+
+	// number of different drive-like body states (hunger, thirst, etc), that are satisfied by a corresponding US outcome
+	Drives int `desc:"number of different drive-like body states (hunger, thirst, etc), that are satisfied by a corresponding US outcome"`
+
+	// number of different CS sensory cues associated with each US (simplest case is 1 -- one-to-one mapping), presented on a fovea input layer
+	CSPerDrive int `desc:"number of different CS sensory cues associated with each US (simplest case is 1 -- one-to-one mapping), presented on a fovea input layer"`
+
+	// number of different locations -- always <= number of drives -- drives have a unique location
+	Locations int `desc:"number of different locations -- always <= number of drives -- drives have a unique location"`
+
+	// maximum distance in time steps to reach the US
+	DistMax int `desc:"maximum distance in time steps to reach the US"`
+
+	// maximum number of time steps before resetting
+	TimeMax int `desc:"maximum number of time steps before resetting"`
+
+	// interval in trials for generating a new state, only if > 0
+	NewStateInt int `desc:"interval in trials for generating a new state, only if > 0"`
+
+	// total number of CS's = Drives * CSPerDrive
+	CSTot int `desc:"total number of CS's = Drives * CSPerDrive"`
+
+	// number of Y-axis repetitions of localist stimuli -- for redundancy in spiking nets
+	NYReps int `desc:"number of Y-axis repetitions of localist stimuli -- for redundancy in spiking nets"`
+
+	// size of CS patterns
+	PatSize evec.Vec2i `desc:"size of CS patterns"`
+
+	// list of actions
+	Acts []string `desc:"list of actions"`
+
+	// action map of action names to indexes
+	ActMap map[string]int `desc:"action map of action names to indexes"`
+
+	// named states -- e.g., USs, CSs, etc
+	States map[string]*etensor.Float32 `desc:"named states -- e.g., USs, CSs, etc"`
+
+	// target position where Drive US is
+	TrgPos int `desc:"target position where Drive US is"`
+
+	// current drive state
+	Drive int `desc:"current drive state"`
+
+	// current distance
+	Dist int `desc:"current distance"`
+
+	// current time, counting up until starting over
+	Time int `desc:"current time, counting up until starting over"`
+
+	// current position being looked at
+	Pos int `desc:"current position being looked at"`
+
+	// reward
+	Rew float32 `desc:"reward"`
+
+	// US is -1 unless consumed at Dist = 0
+	US int `desc:"US is -1 unless consumed at Dist = 0"`
+
+	// count up for generating a new state
+	StateCtr int `desc:"count up for generating a new state"`
+
+	// last action taken
+	LastAct int `desc:"last action taken"`
 }
 
 func (ev *Approach) Name() string {

@@ -29,33 +29,86 @@ import (
 
 // ImagesEnv provides the rendered results of the Obj3D + Saccade generator.
 type ImagesEnv struct {
-	Nm         string          `desc:"name of this environment"`
-	Dsc        string          `desc:"description of this environment"`
-	Test       bool            `desc:"present test items, else train"`
-	Images     Images          `desc:"images list"`
-	TransMax   mat32.Vec2      `desc:"def 0.3 maximum amount of translation as proportion of half-width size in each direction -- 1 = something in center is now at right edge"`
-	TransSigma float32         `def:"0.15" desc:"if > 0, generate translations using gaussian normal distribution with this standard deviation, and then clip to TransMax range -- this facilitates learning on the central region while still giving exposure to wider area.  Tyically turn off for last 100 epochs to measure true uniform distribution performance."`
-	ScaleRange minmax.F32      `desc:"def 0.5 - 1.1 range of scale"`
-	RotateMax  float32         `def:"8" desc:"def 8 maximum degrees of rotation in plane -- image is rotated plus or minus in this range"`
-	V1m16      Vis             `desc:"v1 16deg medium resolution filtering of image -- V1AllTsr has result"`
-	V1h16      Vis             `desc:"v1 16deg higher resolution filtering of image -- V1AllTsr has result"`
-	V1m8       Vis             `desc:"v1 8deg medium resolution filtering of image -- V1AllTsr has result"`
-	V1h8       Vis             `desc:"v1 8deg higher resolution filtering of image -- V1AllTsr has result"`
-	Output     etensor.Float32 `desc:"output category"`
-	StRow      int             `desc:"starting row, e.g., for mpi allocation across processors"`
-	EdRow      int             `desc:"ending row -- if 0 it is ignored"`
-	Order      []int           `desc:"order of images to present"`
-	Run        env.Ctr         `view:"inline" desc:"current run of model as provided during Init"`
-	Epoch      env.Ctr         `view:"inline" desc:"arbitrary aggregation of trials, for stats etc"`
-	Trial      env.Ctr         `view:"inline" desc:"each object trajectory is one trial"`
-	Row        env.Ctr         `view:"inline" desc:"row of item list  -- this is actual counter driving everything"`
-	CurCat     string          `desc:"current category"`
-	CurCatIdx  int             `desc:"index of current category"`
-	CurImg     string          `desc:"current image"`
-	CurTrans   mat32.Vec2      `desc:"current translation"`
-	CurScale   float32         `desc:"current scaling"`
-	CurRot     float32         `desc:"current rotation"`
 
+	// name of this environment
+	Nm string `desc:"name of this environment"`
+
+	// description of this environment
+	Dsc string `desc:"description of this environment"`
+
+	// present test items, else train
+	Test bool `desc:"present test items, else train"`
+
+	// images list
+	Images Images `desc:"images list"`
+
+	// def 0.3 maximum amount of translation as proportion of half-width size in each direction -- 1 = something in center is now at right edge
+	TransMax mat32.Vec2 `desc:"def 0.3 maximum amount of translation as proportion of half-width size in each direction -- 1 = something in center is now at right edge"`
+
+	// [def: 0.15] if > 0, generate translations using gaussian normal distribution with this standard deviation, and then clip to TransMax range -- this facilitates learning on the central region while still giving exposure to wider area.  Tyically turn off for last 100 epochs to measure true uniform distribution performance.
+	TransSigma float32 `def:"0.15" desc:"if > 0, generate translations using gaussian normal distribution with this standard deviation, and then clip to TransMax range -- this facilitates learning on the central region while still giving exposure to wider area.  Tyically turn off for last 100 epochs to measure true uniform distribution performance."`
+
+	// def 0.5 - 1.1 range of scale
+	ScaleRange minmax.F32 `desc:"def 0.5 - 1.1 range of scale"`
+
+	// [def: 8] def 8 maximum degrees of rotation in plane -- image is rotated plus or minus in this range
+	RotateMax float32 `def:"8" desc:"def 8 maximum degrees of rotation in plane -- image is rotated plus or minus in this range"`
+
+	// v1 16deg medium resolution filtering of image -- V1AllTsr has result
+	V1m16 Vis `desc:"v1 16deg medium resolution filtering of image -- V1AllTsr has result"`
+
+	// v1 16deg higher resolution filtering of image -- V1AllTsr has result
+	V1h16 Vis `desc:"v1 16deg higher resolution filtering of image -- V1AllTsr has result"`
+
+	// v1 8deg medium resolution filtering of image -- V1AllTsr has result
+	V1m8 Vis `desc:"v1 8deg medium resolution filtering of image -- V1AllTsr has result"`
+
+	// v1 8deg higher resolution filtering of image -- V1AllTsr has result
+	V1h8 Vis `desc:"v1 8deg higher resolution filtering of image -- V1AllTsr has result"`
+
+	// output category
+	Output etensor.Float32 `desc:"output category"`
+
+	// starting row, e.g., for mpi allocation across processors
+	StRow int `desc:"starting row, e.g., for mpi allocation across processors"`
+
+	// ending row -- if 0 it is ignored
+	EdRow int `desc:"ending row -- if 0 it is ignored"`
+
+	// order of images to present
+	Order []int `desc:"order of images to present"`
+
+	// [view: inline] current run of model as provided during Init
+	Run env.Ctr `view:"inline" desc:"current run of model as provided during Init"`
+
+	// [view: inline] arbitrary aggregation of trials, for stats etc
+	Epoch env.Ctr `view:"inline" desc:"arbitrary aggregation of trials, for stats etc"`
+
+	// [view: inline] each object trajectory is one trial
+	Trial env.Ctr `view:"inline" desc:"each object trajectory is one trial"`
+
+	// [view: inline] row of item list  -- this is actual counter driving everything
+	Row env.Ctr `view:"inline" desc:"row of item list  -- this is actual counter driving everything"`
+
+	// current category
+	CurCat string `desc:"current category"`
+
+	// index of current category
+	CurCatIdx int `desc:"index of current category"`
+
+	// current image
+	CurImg string `desc:"current image"`
+
+	// current translation
+	CurTrans mat32.Vec2 `desc:"current translation"`
+
+	// current scaling
+	CurScale float32 `desc:"current scaling"`
+
+	// current rotation
+	CurRot float32 `desc:"current rotation"`
+
+	// [view: -] rendered image as loaded
 	Image image.Image `view:"-" desc:"rendered image as loaded"`
 }
 

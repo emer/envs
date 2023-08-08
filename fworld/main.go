@@ -36,19 +36,45 @@ const LogPrec = 4
 
 // Sim holds the params, table, etc
 type Sim struct {
-	World     FWorld             `desc:"the flat world"`
-	StepN     int                `desc:"number of steps to take for StepN button"`
-	Trace     *etensor.Int       `view:"no-inline" desc:"trace of movement"`
+
+	// the flat world
+	World FWorld `desc:"the flat world"`
+
+	// number of steps to take for StepN button
+	StepN int `desc:"number of steps to take for StepN button"`
+
+	// [view: no-inline] trace of movement
+	Trace *etensor.Int `view:"no-inline" desc:"trace of movement"`
+
+	// view of the activity trace
 	TraceView *etview.TensorGrid `desc:"view of the activity trace"`
+
+	// view of the world
 	WorldView *etview.TensorGrid `desc:"view of the world"`
-	State     *etable.Table      `desc:"table recording env"`
-	StateView *etview.TableView  `view:"-" desc:"the main view"`
-	Win       *gi.Window         `view:"-" desc:"main GUI window"`
-	ToolBar   *gi.ToolBar        `view:"-" desc:"the master toolbar"`
-	TabView   *gi.TabView        `view:"-" desc:"the tab view"`
-	MatColors []string           `desc:"color strings in material order"`
-	StopNow   bool               `view:"-" desc:"flag to stop running"`
-	IsRunning bool               `view:"-" desc:"true when running"`
+
+	// table recording env
+	State *etable.Table `desc:"table recording env"`
+
+	// [view: -] the main view
+	StateView *etview.TableView `view:"-" desc:"the main view"`
+
+	// [view: -] main GUI window
+	Win *gi.Window `view:"-" desc:"main GUI window"`
+
+	// [view: -] the master toolbar
+	ToolBar *gi.ToolBar `view:"-" desc:"the master toolbar"`
+
+	// [view: -] the tab view
+	TabView *gi.TabView `view:"-" desc:"the tab view"`
+
+	// color strings in material order
+	MatColors []string `desc:"color strings in material order"`
+
+	// [view: -] flag to stop running
+	StopNow bool `view:"-" desc:"flag to stop running"`
+
+	// [view: -] true when running
+	IsRunning bool `view:"-" desc:"true when running"`
 }
 
 // TheSim is the overall state for this simulation

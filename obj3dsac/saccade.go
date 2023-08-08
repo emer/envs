@@ -24,41 +24,105 @@ import (
 // in view.  Generates the track of the object.
 // World size is defined as -1..1 in normalized units.
 type Saccade struct {
-	TrajLenRange minmax.Int `desc:"range of trajectory lengths (time steps)"`
-	FixDurRange  minmax.Int `desc:"range of fixation durations"`
-	RandObjPos   bool       `desc:"if true, randomize the object position at start of every trajectory -- this can be confusing for prediction however"`
-	SacGenMax    float32    `desc:"maximum saccade size"`
-	VelGenMax    float32    `desc:"maximum object velocity"`
-	ZeroVelP     float64    `desc:"probability of zero velocity object motion as a discrete option prior to computing random velocity"`
-	Margin       float32    `desc:"edge around World to not look past"`
-	ViewPct      float32    `desc:"size of view as proportion of -1..1 world size"`
-	WorldVisSz   evec.Vec2i `desc:"visualization size of world -- for debug visualization"`
-	ViewVisSz    evec.Vec2i `desc:"visualization size of view -- for debug visualization"`
-	AddRows      bool       `desc:"add rows to Table for each step (for debugging) -- else re-use 0"`
 
-	// State below here
-	Table       *etable.Table    `desc:"table showing visualization of state"`
-	WorldTsr    *etensor.Float32 `inactive:"+" desc:"tensor state showing world position of obj"`
-	EyePosTsr   *etensor.Float32 `inactive:"+" desc:"tensor state showing eye position"`
-	SacPlanTsr  *etensor.Float32 `inactive:"+" desc:"tensor state showing saccade plan"`
-	ViewTsr     *etensor.Float32 `inactive:"+" desc:"tensor state showing view position of obj"`
-	TrajLen     int              `inactive:"+" desc:"current trajectory length"`
-	FixDur      int              `inactive:"+" desc:"current fixation duration"`
-	Tick        env.Ctr          `inactive:"+" desc:"tick counter within trajectory, counts up from 0..TrajLen-1"`
-	SacTick     env.Ctr          `inactive:"+" desc:"tick counter within current fixation"`
-	World       minmax.F32       `inactive:"+" desc:"World minus margin"`
-	View        minmax.F32       `inactive:"+" desc:"View minus margin"`
-	ObjPos      mat32.Vec2       `inactive:"+" desc:"object position, in world coordinates"`
-	ObjViewPos  mat32.Vec2       `inactive:"+" desc:"object position, in view coordinates"`
-	ObjVel      mat32.Vec2       `inactive:"+" desc:"object velocity, in world coordinates"`
-	ObjPosNext  mat32.Vec2       `inactive:"+" desc:"next object position, in world coordinates"`
-	ObjVelNext  mat32.Vec2       `inactive:"+" desc:"next object velocity, in world coordinates"`
-	EyePos      mat32.Vec2       `inactive:"+" desc:"eye position, in world coordinates"`
-	SacPlan     mat32.Vec2       `inactive:"+" desc:"eye movement plan, in world coordinates"`
-	Saccade     mat32.Vec2       `inactive:"+" desc:"current trial eye movement, in world coordinates"`
-	NewTraj     bool             `inactive:"+" desc:"true if new trajectory started on this trial"`
-	NewSac      bool             `inactive:"+" desc:"true if new saccade was made on this trial"`
-	NewTrajNext bool             `inactive:"+" desc:"true if next trial will be a new trajectory"`
+	// range of trajectory lengths (time steps)
+	TrajLenRange minmax.Int `desc:"range of trajectory lengths (time steps)"`
+
+	// range of fixation durations
+	FixDurRange minmax.Int `desc:"range of fixation durations"`
+
+	// if true, randomize the object position at start of every trajectory -- this can be confusing for prediction however
+	RandObjPos bool `desc:"if true, randomize the object position at start of every trajectory -- this can be confusing for prediction however"`
+
+	// maximum saccade size
+	SacGenMax float32 `desc:"maximum saccade size"`
+
+	// maximum object velocity
+	VelGenMax float32 `desc:"maximum object velocity"`
+
+	// probability of zero velocity object motion as a discrete option prior to computing random velocity
+	ZeroVelP float64 `desc:"probability of zero velocity object motion as a discrete option prior to computing random velocity"`
+
+	// edge around World to not look past
+	Margin float32 `desc:"edge around World to not look past"`
+
+	// size of view as proportion of -1..1 world size
+	ViewPct float32 `desc:"size of view as proportion of -1..1 world size"`
+
+	// visualization size of world -- for debug visualization
+	WorldVisSz evec.Vec2i `desc:"visualization size of world -- for debug visualization"`
+
+	// visualization size of view -- for debug visualization
+	ViewVisSz evec.Vec2i `desc:"visualization size of view -- for debug visualization"`
+
+	// add rows to Table for each step (for debugging) -- else re-use 0
+	AddRows bool `desc:"add rows to Table for each step (for debugging) -- else re-use 0"`
+
+	// table showing visualization of state
+	Table *etable.Table `desc:"table showing visualization of state"`
+
+	// tensor state showing world position of obj
+	WorldTsr *etensor.Float32 `inactive:"+" desc:"tensor state showing world position of obj"`
+
+	// tensor state showing eye position
+	EyePosTsr *etensor.Float32 `inactive:"+" desc:"tensor state showing eye position"`
+
+	// tensor state showing saccade plan
+	SacPlanTsr *etensor.Float32 `inactive:"+" desc:"tensor state showing saccade plan"`
+
+	// tensor state showing view position of obj
+	ViewTsr *etensor.Float32 `inactive:"+" desc:"tensor state showing view position of obj"`
+
+	// current trajectory length
+	TrajLen int `inactive:"+" desc:"current trajectory length"`
+
+	// current fixation duration
+	FixDur int `inactive:"+" desc:"current fixation duration"`
+
+	// tick counter within trajectory, counts up from 0..TrajLen-1
+	Tick env.Ctr `inactive:"+" desc:"tick counter within trajectory, counts up from 0..TrajLen-1"`
+
+	// tick counter within current fixation
+	SacTick env.Ctr `inactive:"+" desc:"tick counter within current fixation"`
+
+	// World minus margin
+	World minmax.F32 `inactive:"+" desc:"World minus margin"`
+
+	// View minus margin
+	View minmax.F32 `inactive:"+" desc:"View minus margin"`
+
+	// object position, in world coordinates
+	ObjPos mat32.Vec2 `inactive:"+" desc:"object position, in world coordinates"`
+
+	// object position, in view coordinates
+	ObjViewPos mat32.Vec2 `inactive:"+" desc:"object position, in view coordinates"`
+
+	// object velocity, in world coordinates
+	ObjVel mat32.Vec2 `inactive:"+" desc:"object velocity, in world coordinates"`
+
+	// next object position, in world coordinates
+	ObjPosNext mat32.Vec2 `inactive:"+" desc:"next object position, in world coordinates"`
+
+	// next object velocity, in world coordinates
+	ObjVelNext mat32.Vec2 `inactive:"+" desc:"next object velocity, in world coordinates"`
+
+	// eye position, in world coordinates
+	EyePos mat32.Vec2 `inactive:"+" desc:"eye position, in world coordinates"`
+
+	// eye movement plan, in world coordinates
+	SacPlan mat32.Vec2 `inactive:"+" desc:"eye movement plan, in world coordinates"`
+
+	// current trial eye movement, in world coordinates
+	Saccade mat32.Vec2 `inactive:"+" desc:"current trial eye movement, in world coordinates"`
+
+	// true if new trajectory started on this trial
+	NewTraj bool `inactive:"+" desc:"true if new trajectory started on this trial"`
+
+	// true if new saccade was made on this trial
+	NewSac bool `inactive:"+" desc:"true if new saccade was made on this trial"`
+
+	// true if next trial will be a new trajectory
+	NewTrajNext bool `inactive:"+" desc:"true if next trial will be a new trajectory"`
 }
 
 // Defaults sets generic defaults -- use ParamSet to override

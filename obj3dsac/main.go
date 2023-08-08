@@ -33,11 +33,21 @@ const LogPrec = 4
 
 // Sim holds the params, table, etc
 type Sim struct {
-	Obj       Obj3DSac          `desc:"the env item"`
-	StepN     int               `desc:"number of steps to take for StepN button"`
+
+	// the env item
+	Obj Obj3DSac `desc:"the env item"`
+
+	// number of steps to take for StepN button
+	StepN int `desc:"number of steps to take for StepN button"`
+
+	// [view: -] the main view
 	TableView *etview.TableView `view:"-" desc:"the main view"`
-	Win       *gi.Window        `view:"-" desc:"main GUI window"`
-	ToolBar   *gi.ToolBar       `view:"-" desc:"the master toolbar"`
+
+	// [view: -] main GUI window
+	Win *gi.Window `view:"-" desc:"main GUI window"`
+
+	// [view: -] the master toolbar
+	ToolBar *gi.ToolBar `view:"-" desc:"the master toolbar"`
 }
 
 // TheSim is the overall state for this simulation

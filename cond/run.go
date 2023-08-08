@@ -6,14 +6,30 @@ package cond
 
 // Run is a sequence of Conditions to run in order
 type Run struct {
-	Name    string `desc:"Name of the run"`
-	Desc    string `desc:"Description"`
+
+	// Name of the run
+	Name string `desc:"Name of the run"`
+
+	// Description
+	Desc string `desc:"Description"`
+
+	// name of condition for weights file to load prior to starting -- allows faster testing but weights may be out of date
 	Weights string `desc:"name of condition for weights file to load prior to starting -- allows faster testing but weights may be out of date"`
-	Cond1   string `desc:"name of condition 1"`
-	Cond2   string `desc:"name of condition 2"`
-	Cond3   string `desc:"name of condition 3"`
-	Cond4   string `desc:"name of condition 4"`
-	Cond5   string `desc:"name of condition 5"`
+
+	// name of condition 1
+	Cond1 string `desc:"name of condition 1"`
+
+	// name of condition 2
+	Cond2 string `desc:"name of condition 2"`
+
+	// name of condition 3
+	Cond3 string `desc:"name of condition 3"`
+
+	// name of condition 4
+	Cond4 string `desc:"name of condition 4"`
+
+	// name of condition 5
+	Cond5 string `desc:"name of condition 5"`
 }
 
 // NConds returns the number of conditions in this Run

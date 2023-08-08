@@ -35,12 +35,24 @@ const LogPrec = 4
 
 // Sim holds the params, table, etc
 type Sim struct {
-	InputSize evec.Vec2i        `desc:"size of input"`
-	Corpus    CorpusEnv         `desc:"the env item"`
-	Table     *etable.Table     `desc:"table recording env"`
-	View      *etview.TableView `view:"-" desc:"the main view"`
-	Win       *gi.Window        `view:"-" desc:"main GUI window"`
-	ToolBar   *gi.ToolBar       `view:"-" desc:"the master toolbar"`
+
+	// size of input
+	InputSize evec.Vec2i `desc:"size of input"`
+
+	// the env item
+	Corpus CorpusEnv `desc:"the env item"`
+
+	// table recording env
+	Table *etable.Table `desc:"table recording env"`
+
+	// [view: -] the main view
+	View *etview.TableView `view:"-" desc:"the main view"`
+
+	// [view: -] main GUI window
+	Win *gi.Window `view:"-" desc:"main GUI window"`
+
+	// [view: -] the master toolbar
+	ToolBar *gi.ToolBar `view:"-" desc:"the master toolbar"`
 }
 
 // TheSim is the overall state for this simulation

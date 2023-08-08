@@ -21,32 +21,77 @@ import (
 
 // Obj3DSacEnv provides the rendered results of the Obj3D + Saccade generator.
 type Obj3DSacEnv struct {
-	Nm        string          `desc:"name of this environment"`
-	Dsc       string          `desc:"description of this environment"`
-	Path      string          `desc:"path to data.tsv file as rendered, e.g., images/train"`
-	Table     *etable.Table   `desc:"loaded table of generated trial / tick data"`
-	IdxView   *etable.IdxView `desc:"indexed view of the table -- so you can do some additional filtering as needed -- sequential view created automatically if not otherwise set"`
-	EyePop    popcode.TwoD    `desc:"2d population code for gaussian bump rendering of eye position"`
-	SacPop    popcode.TwoD    `desc:"2d population code for gaussian bump rendering of saccade plan / execution"`
-	ObjVelPop popcode.TwoD    `desc:"2d population code for gaussian bump rendering of object velocity"`
-	V1Med     Vis             `desc:"v1 medium resolution filtering of image -- V1AllTsr has result"`
-	V1Hi      Vis             `desc:"v1 higher resolution filtering of image -- V1AllTsr has result"`
-	Objs      []string        `desc:"list of objects, as cat/objfile"`
-	Cats      []string        `desc:"list of categories"`
-	Run       env.Ctr         `view:"inline" desc:"current run of model as provided during Init"`
-	Epoch     env.Ctr         `view:"inline" desc:"arbitrary aggregation of trials, for stats etc"`
-	Trial     env.Ctr         `view:"inline" desc:"each object trajectory is one trial"`
-	Tick      env.Ctr         `view:"inline" desc:"step along the trajectory"`
-	Row       env.Ctr         `view:"inline" desc:"row of table -- this is actual counter driving everything"`
-	CurCat    string          `desc:"current category"`
-	CurObj    string          `desc:"current object"`
 
-	// user can set the 2D shapes of these tensors -- Defaults sets default shapes
-	EyePos  etensor.Float32 `desc:"eye position popcode"`
+	// name of this environment
+	Nm string `desc:"name of this environment"`
+
+	// description of this environment
+	Dsc string `desc:"description of this environment"`
+
+	// path to data.tsv file as rendered, e.g., images/train
+	Path string `desc:"path to data.tsv file as rendered, e.g., images/train"`
+
+	// loaded table of generated trial / tick data
+	Table *etable.Table `desc:"loaded table of generated trial / tick data"`
+
+	// indexed view of the table -- so you can do some additional filtering as needed -- sequential view created automatically if not otherwise set
+	IdxView *etable.IdxView `desc:"indexed view of the table -- so you can do some additional filtering as needed -- sequential view created automatically if not otherwise set"`
+
+	// 2d population code for gaussian bump rendering of eye position
+	EyePop popcode.TwoD `desc:"2d population code for gaussian bump rendering of eye position"`
+
+	// 2d population code for gaussian bump rendering of saccade plan / execution
+	SacPop popcode.TwoD `desc:"2d population code for gaussian bump rendering of saccade plan / execution"`
+
+	// 2d population code for gaussian bump rendering of object velocity
+	ObjVelPop popcode.TwoD `desc:"2d population code for gaussian bump rendering of object velocity"`
+
+	// v1 medium resolution filtering of image -- V1AllTsr has result
+	V1Med Vis `desc:"v1 medium resolution filtering of image -- V1AllTsr has result"`
+
+	// v1 higher resolution filtering of image -- V1AllTsr has result
+	V1Hi Vis `desc:"v1 higher resolution filtering of image -- V1AllTsr has result"`
+
+	// list of objects, as cat/objfile
+	Objs []string `desc:"list of objects, as cat/objfile"`
+
+	// list of categories
+	Cats []string `desc:"list of categories"`
+
+	// [view: inline] current run of model as provided during Init
+	Run env.Ctr `view:"inline" desc:"current run of model as provided during Init"`
+
+	// [view: inline] arbitrary aggregation of trials, for stats etc
+	Epoch env.Ctr `view:"inline" desc:"arbitrary aggregation of trials, for stats etc"`
+
+	// [view: inline] each object trajectory is one trial
+	Trial env.Ctr `view:"inline" desc:"each object trajectory is one trial"`
+
+	// [view: inline] step along the trajectory
+	Tick env.Ctr `view:"inline" desc:"step along the trajectory"`
+
+	// [view: inline] row of table -- this is actual counter driving everything
+	Row env.Ctr `view:"inline" desc:"row of table -- this is actual counter driving everything"`
+
+	// current category
+	CurCat string `desc:"current category"`
+
+	// current object
+	CurObj string `desc:"current object"`
+
+	// eye position popcode
+	EyePos etensor.Float32 `desc:"eye position popcode"`
+
+	// saccade plan popcode
 	SacPlan etensor.Float32 `desc:"saccade plan popcode"`
-	Saccade etensor.Float32 `desc:"saccade popcode "`
-	ObjVel  etensor.Float32 `desc:"object velocity"`
 
+	// saccade popcode
+	Saccade etensor.Float32 `desc:"saccade popcode "`
+
+	// object velocity
+	ObjVel etensor.Float32 `desc:"object velocity"`
+
+	// [view: -] rendered image as loaded
 	Image image.Image `view:"-" desc:"rendered image as loaded"`
 }
 

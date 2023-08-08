@@ -28,34 +28,86 @@ import (
 // units (requiring a large input layer) or using random distributed vectors in a
 // lower-dimensional space.
 type CorpusEnv struct {
-	Nm         string             `desc:"name of this environment"`
-	Dsc        string             `desc:"description of this environment"`
-	Words      []string           `desc:"full list of words used for activating state units according to index"`
-	WordMap    map[string]int     `desc:"map of words onto index in Words list"`
-	FreqMap    map[string]float64 `desc:"map of words onto frequency in entire corpus, normalized"`
-	Corpus     []string           `desc:"entire corpus as one long list of words"`
-	Sentences  [][]string         `desc:"full list of sentences"`
-	SentOffs   []int              `desc:"offsets into corpus for each sentence"`
-	WordReps   etensor.Float32    `desc:"map of words into random distributed vector encodings"`
-	InputWords []string           `desc:"list of words in the current window"`
-	Input      etensor.Float32    `desc:"current window activation state"`
 
-	ProbeMode  bool       `desc:"instead of presenting full sentences, this env just probes each word in turn"`
-	WindowSize int        `desc:"size of sliding window of words to show in input"`
-	Localist   bool       `desc:"use localist 1-hot encoding of words -- else random dist vectors"`
-	DistPctAct float64    `desc:"distributed representations of words: target percent activity total for WindowSize words all on at same time"`
-	DropOut    bool       `desc:"randomly drop out the highest-frequency inputs"`
-	UseUNK     bool       `desc:"use an UNK token for unknown words -- otherwise just skip"`
-	InputSize  evec.Vec2i `desc:"size of input layer state"`
-	MaxVocab   int        `desc:"maximum number of words representable -- InputSize.X*Y"`
-	VocabFile  string     `desc:"location of the generated vocabulary file"`
-	CorpStart  int        `inactive:"+" desc:"for this processor (MPI), starting index into Corpus"`
-	CorpEnd    int        `inactive:"+" desc:"for this processor (MPI), ending index into Corpus"`
+	// name of this environment
+	Nm string `desc:"name of this environment"`
 
-	Run   env.Ctr `view:"inline" desc:"current run of model as provided during Init"`
+	// description of this environment
+	Dsc string `desc:"description of this environment"`
+
+	// full list of words used for activating state units according to index
+	Words []string `desc:"full list of words used for activating state units according to index"`
+
+	// map of words onto index in Words list
+	WordMap map[string]int `desc:"map of words onto index in Words list"`
+
+	// map of words onto frequency in entire corpus, normalized
+	FreqMap map[string]float64 `desc:"map of words onto frequency in entire corpus, normalized"`
+
+	// entire corpus as one long list of words
+	Corpus []string `desc:"entire corpus as one long list of words"`
+
+	// full list of sentences
+	Sentences [][]string `desc:"full list of sentences"`
+
+	// offsets into corpus for each sentence
+	SentOffs []int `desc:"offsets into corpus for each sentence"`
+
+	// map of words into random distributed vector encodings
+	WordReps etensor.Float32 `desc:"map of words into random distributed vector encodings"`
+
+	// list of words in the current window
+	InputWords []string `desc:"list of words in the current window"`
+
+	// current window activation state
+	Input etensor.Float32 `desc:"current window activation state"`
+
+	// instead of presenting full sentences, this env just probes each word in turn
+	ProbeMode bool `desc:"instead of presenting full sentences, this env just probes each word in turn"`
+
+	// size of sliding window of words to show in input
+	WindowSize int `desc:"size of sliding window of words to show in input"`
+
+	// use localist 1-hot encoding of words -- else random dist vectors
+	Localist bool `desc:"use localist 1-hot encoding of words -- else random dist vectors"`
+
+	// distributed representations of words: target percent activity total for WindowSize words all on at same time
+	DistPctAct float64 `desc:"distributed representations of words: target percent activity total for WindowSize words all on at same time"`
+
+	// randomly drop out the highest-frequency inputs
+	DropOut bool `desc:"randomly drop out the highest-frequency inputs"`
+
+	// use an UNK token for unknown words -- otherwise just skip
+	UseUNK bool `desc:"use an UNK token for unknown words -- otherwise just skip"`
+
+	// size of input layer state
+	InputSize evec.Vec2i `desc:"size of input layer state"`
+
+	// maximum number of words representable -- InputSize.X*Y
+	MaxVocab int `desc:"maximum number of words representable -- InputSize.X*Y"`
+
+	// location of the generated vocabulary file
+	VocabFile string `desc:"location of the generated vocabulary file"`
+
+	// for this processor (MPI), starting index into Corpus
+	CorpStart int `inactive:"+" desc:"for this processor (MPI), starting index into Corpus"`
+
+	// for this processor (MPI), ending index into Corpus
+	CorpEnd int `inactive:"+" desc:"for this processor (MPI), ending index into Corpus"`
+
+	// [view: inline] current run of model as provided during Init
+	Run env.Ctr `view:"inline" desc:"current run of model as provided during Init"`
+
+	// [view: inline] epoch is arbitrary increment of number of times through trial.Max steps
 	Epoch env.Ctr `view:"inline" desc:"epoch is arbitrary increment of number of times through trial.Max steps"`
+
+	// [view: inline] trial is the network training step counter
 	Trial env.Ctr `view:"inline" desc:"trial is the network training step counter"`
-	Tick  env.Ctr `view:"inline" desc:"tick counts steps through the Corpus"`
+
+	// [view: inline] tick counts steps through the Corpus
+	Tick env.Ctr `view:"inline" desc:"tick counts steps through the Corpus"`
+
+	// [view: inline] block counts iterations through the entire Corpus
 	Block env.Ctr `view:"inline" desc:"block counts iterations through the entire Corpus"`
 }
 

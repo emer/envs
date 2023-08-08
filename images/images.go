@@ -18,19 +18,45 @@ import (
 // Images implements management of lists of image files,
 // with category names or organized in directories by category.
 type Images struct {
-	Path        string         `desc:"path to image files -- this should point to a directory that has files or subdirectories that then have image files in them"`
-	Exts        []string       `desc:"extensions of image files to find (lowercase)"`
-	CatSep      string         `desc:"separator in file name for category label -- if empty then must have subdirs"`
-	SplitByItm  bool           `desc:"split by item -- each file name has an item label after CatSep"`
-	NTestPerCat int            `desc:"number of testing images per category -- if SplitByItem images are split by item id"`
-	Cats        []string       `desc:"list of image categories"`
-	CatMap      map[string]int `desc:"map of categories to indexes in Cats list"`
-	ImagesAll   [][]string     `desc:"full list of images, organized by category (directory) and then filename"`
-	ImagesTrain [][]string     `desc:"list of training images, organized by category (directory) and then filename"`
-	ImagesTest  [][]string     `desc:"list of testing images, organized by category (directory) and then filename"`
-	FlatAll     []string       `desc:"flat list of all images, as cat/filename.ext -- Flats() makes from above"`
-	FlatTrain   []string       `desc:"flat list of all training images, as cat/filename.ext -- Flats() makes from above"`
-	FlatTest    []string       `desc:"flat list of all testing images, as cat/filename.ext -- Flats() makes from above"`
+
+	// path to image files -- this should point to a directory that has files or subdirectories that then have image files in them
+	Path string `desc:"path to image files -- this should point to a directory that has files or subdirectories that then have image files in them"`
+
+	// extensions of image files to find (lowercase)
+	Exts []string `desc:"extensions of image files to find (lowercase)"`
+
+	// separator in file name for category label -- if empty then must have subdirs
+	CatSep string `desc:"separator in file name for category label -- if empty then must have subdirs"`
+
+	// split by item -- each file name has an item label after CatSep
+	SplitByItm bool `desc:"split by item -- each file name has an item label after CatSep"`
+
+	// number of testing images per category -- if SplitByItem images are split by item id
+	NTestPerCat int `desc:"number of testing images per category -- if SplitByItem images are split by item id"`
+
+	// list of image categories
+	Cats []string `desc:"list of image categories"`
+
+	// map of categories to indexes in Cats list
+	CatMap map[string]int `desc:"map of categories to indexes in Cats list"`
+
+	// full list of images, organized by category (directory) and then filename
+	ImagesAll [][]string `desc:"full list of images, organized by category (directory) and then filename"`
+
+	// list of training images, organized by category (directory) and then filename
+	ImagesTrain [][]string `desc:"list of training images, organized by category (directory) and then filename"`
+
+	// list of testing images, organized by category (directory) and then filename
+	ImagesTest [][]string `desc:"list of testing images, organized by category (directory) and then filename"`
+
+	// flat list of all images, as cat/filename.ext -- Flats() makes from above
+	FlatAll []string `desc:"flat list of all images, as cat/filename.ext -- Flats() makes from above"`
+
+	// flat list of all training images, as cat/filename.ext -- Flats() makes from above
+	FlatTrain []string `desc:"flat list of all training images, as cat/filename.ext -- Flats() makes from above"`
+
+	// flat list of all testing images, as cat/filename.ext -- Flats() makes from above
+	FlatTest []string `desc:"flat list of all testing images, as cat/filename.ext -- Flats() makes from above"`
 }
 
 // SetPath sets path, with given extensions, and separator

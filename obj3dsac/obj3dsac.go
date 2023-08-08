@@ -32,46 +32,120 @@ import (
 // offline training of models on a cluster using this code, or
 // incorporate into an env for more dynamic uses.
 type Obj3DSac struct {
-	Objs       Obj3D         `desc:"list of 3D objects"`
-	Sac        Saccade       `desc:"saccade control"`
-	Env        Obj3DSacEnv   `desc:"environment that loads rendered images"`
-	SaveFiles  bool          `desc:"if true, save images (in epoch-wise subdirs) and data.tsv file with saccade position data and image name, to images dir"`
-	NTrials    int           `desc:"number of trials per epoch, for saving"`
-	NEpcs      int           `desc:"number of epochs"`
-	Table      *etable.Table `desc:"if saving, this is the trial-by-trial data"`
-	Train      bool          `desc:"if true, use training set of objects, else test"`
-	Sequential bool          `desc:"if true, present in sequential order -- else permuted"`
-	FOV        float32       `desc:"field of view for camera"`
-	ImgSize    image.Point   `desc:"size of image to render"`
-	ViewScale  int           `desc:"scale factor for viewing the image"`
-	CamPos     mat32.Vec3    `desc:"camera position -- object is positioned around 0,0,0"`
-	ZOffScale  float32       `desc:"multiplies the object XYtrg - XYsz to set Zoff to keep general size of objects about the same"`
-	ZOffXYtrg  float32       `desc:"target XYsz for z offset scaling"`
-	XYPosScale float32       `desc:"multiplier for X,Y positions from saccade"`
-	Rot3D      mat32.Vec3    `desc:"how much to rotate along each axis, in degrees per step"`
-	ObjIdx     int           `desc:"index in objs list of current object"`
-	Order      []int         `desc:"order to present items (permuted or sequential)"`
 
-	CurObj  string     `inactive:"+" desc:"current object to show"`
-	CurCat  string     `inactive:"+" desc:"current category to show"`
-	CurXYsz float32    `inactive:"+" desc:"current object XY size"`
-	CurZoff float32    `inactive:"+" desc:"current Z offset based on XYsz and ZOff*"`
+	// list of 3D objects
+	Objs Obj3D `desc:"list of 3D objects"`
+
+	// saccade control
+	Sac Saccade `desc:"saccade control"`
+
+	// environment that loads rendered images
+	Env Obj3DSacEnv `desc:"environment that loads rendered images"`
+
+	// if true, save images (in epoch-wise subdirs) and data.tsv file with saccade position data and image name, to images dir
+	SaveFiles bool `desc:"if true, save images (in epoch-wise subdirs) and data.tsv file with saccade position data and image name, to images dir"`
+
+	// number of trials per epoch, for saving
+	NTrials int `desc:"number of trials per epoch, for saving"`
+
+	// number of epochs
+	NEpcs int `desc:"number of epochs"`
+
+	// if saving, this is the trial-by-trial data
+	Table *etable.Table `desc:"if saving, this is the trial-by-trial data"`
+
+	// if true, use training set of objects, else test
+	Train bool `desc:"if true, use training set of objects, else test"`
+
+	// if true, present in sequential order -- else permuted
+	Sequential bool `desc:"if true, present in sequential order -- else permuted"`
+
+	// field of view for camera
+	FOV float32 `desc:"field of view for camera"`
+
+	// size of image to render
+	ImgSize image.Point `desc:"size of image to render"`
+
+	// scale factor for viewing the image
+	ViewScale int `desc:"scale factor for viewing the image"`
+
+	// camera position -- object is positioned around 0,0,0
+	CamPos mat32.Vec3 `desc:"camera position -- object is positioned around 0,0,0"`
+
+	// multiplies the object XYtrg - XYsz to set Zoff to keep general size of objects about the same
+	ZOffScale float32 `desc:"multiplies the object XYtrg - XYsz to set Zoff to keep general size of objects about the same"`
+
+	// target XYsz for z offset scaling
+	ZOffXYtrg float32 `desc:"target XYsz for z offset scaling"`
+
+	// multiplier for X,Y positions from saccade
+	XYPosScale float32 `desc:"multiplier for X,Y positions from saccade"`
+
+	// how much to rotate along each axis, in degrees per step
+	Rot3D mat32.Vec3 `desc:"how much to rotate along each axis, in degrees per step"`
+
+	// index in objs list of current object
+	ObjIdx int `desc:"index in objs list of current object"`
+
+	// order to present items (permuted or sequential)
+	Order []int `desc:"order to present items (permuted or sequential)"`
+
+	// current object to show
+	CurObj string `inactive:"+" desc:"current object to show"`
+
+	// current category to show
+	CurCat string `inactive:"+" desc:"current category to show"`
+
+	// current object XY size
+	CurXYsz float32 `inactive:"+" desc:"current object XY size"`
+
+	// current Z offset based on XYsz and ZOff*
+	CurZoff float32 `inactive:"+" desc:"current Z offset based on XYsz and ZOff*"`
+
+	// initial euler 3D rotation, in degrees
 	InitRot mat32.Vec3 `inactive:"+" desc:"initial euler 3D rotation, in degrees"`
-	RotVel  mat32.Vec3 `inactive:"+" desc:"3D rotational velocity (degrees per step) for current object"`
-	CurRot  mat32.Vec3 `inactive:"+" desc:"current euler rotation"`
-	Trial   env.Ctr    `inactive:"+" desc:"current trial, for saving"`
-	Epoch   env.Ctr    `inactive:"+" desc:"current epoch, for saving"`
-	SaveDir string     `inactive:"+" desc:"name of current directory to save files into (images/train or images/test)"`
-	ImgFile string     `inactive:"+" desc:"name of image file"`
 
-	Image     image.Image      `view:"-" desc:"current rendered image in specified size"`
-	ViewImage *gi.Bitmap       `view:"-" desc:"View of image (scaled up) as a bitmap"`
-	Scene     *gi3d.Scene      `view:"-" desc:"3D scene"`
-	Group     *gi3d.Group      `view:"-" desc:"group holding loaded object"`
-	Frame     vgpu.RenderFrame `view:"-" desc:"offscreen render buffer"`
-	File      *os.File         `view:"-" desc:"save file"`
-	StopNow   bool             `view:"-" desc:"flag to stop running"`
-	IsRunning bool             `view:"-" desc:"true when running"`
+	// 3D rotational velocity (degrees per step) for current object
+	RotVel mat32.Vec3 `inactive:"+" desc:"3D rotational velocity (degrees per step) for current object"`
+
+	// current euler rotation
+	CurRot mat32.Vec3 `inactive:"+" desc:"current euler rotation"`
+
+	// current trial, for saving
+	Trial env.Ctr `inactive:"+" desc:"current trial, for saving"`
+
+	// current epoch, for saving
+	Epoch env.Ctr `inactive:"+" desc:"current epoch, for saving"`
+
+	// name of current directory to save files into (images/train or images/test)
+	SaveDir string `inactive:"+" desc:"name of current directory to save files into (images/train or images/test)"`
+
+	// name of image file
+	ImgFile string `inactive:"+" desc:"name of image file"`
+
+	// [view: -] current rendered image in specified size
+	Image image.Image `view:"-" desc:"current rendered image in specified size"`
+
+	// [view: -] View of image (scaled up) as a bitmap
+	ViewImage *gi.Bitmap `view:"-" desc:"View of image (scaled up) as a bitmap"`
+
+	// [view: -] 3D scene
+	Scene *gi3d.Scene `view:"-" desc:"3D scene"`
+
+	// [view: -] group holding loaded object
+	Group *gi3d.Group `view:"-" desc:"group holding loaded object"`
+
+	// [view: -] offscreen render buffer
+	Frame vgpu.RenderFrame `view:"-" desc:"offscreen render buffer"`
+
+	// [view: -] save file
+	File *os.File `view:"-" desc:"save file"`
+
+	// [view: -] flag to stop running
+	StopNow bool `view:"-" desc:"flag to stop running"`
+
+	// [view: -] true when running
+	IsRunning bool `view:"-" desc:"true when running"`
 }
 
 func (ob *Obj3DSac) Defaults() {

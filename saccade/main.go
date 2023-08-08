@@ -32,10 +32,18 @@ const LogPrec = 4
 
 // Sim holds the params, table, etc
 type Sim struct {
-	Sac     Saccade           `desc:"the env item"`
-	View    *etview.TableView `view:"-" desc:"the main view"`
-	Win     *gi.Window        `view:"-" desc:"main GUI window"`
-	ToolBar *gi.ToolBar       `view:"-" desc:"the master toolbar"`
+
+	// the env item
+	Sac Saccade `desc:"the env item"`
+
+	// [view: -] the main view
+	View *etview.TableView `view:"-" desc:"the main view"`
+
+	// [view: -] main GUI window
+	Win *gi.Window `view:"-" desc:"main GUI window"`
+
+	// [view: -] the master toolbar
+	ToolBar *gi.ToolBar `view:"-" desc:"the master toolbar"`
 }
 
 // TheSim is the overall state for this simulation

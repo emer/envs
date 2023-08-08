@@ -32,26 +32,62 @@ func (ev *Valence) UnmarshalJSON(b []byte) error { return kit.EnumUnmarshalJSON(
 // NTicks individual time steps, with one or more CS's (conditioned stimuli)
 // and a US (unconditioned stimulus -- outcome).
 type Trial struct {
-	Name     string  `desc:"conventional suffixes: _R = reward, _NR = non-reward; _test = test trial (no learning)"`
-	Test     bool    `desc:"true if testing only -- no learning"`
-	Pct      float32 `desc:"Percent of all trials for this type"`
-	Valence  Valence `desc:"Positive or negative reward valence"`
-	USProb   float32 `desc:"Probability of US"`
-	MixedUS  bool    `desc:"Mixed US set?"`
-	USMag    float32 `desc:"US magnitude"`
-	NTicks   int     `desc:"Number of ticks for a trial"`
-	CS       string  `desc:"Conditioned stimulus"`
-	CSStart  int     `desc:"Tick of CS start"`
-	CSEnd    int     `desc:"Tick of CS end"`
-	CS2Start int     `desc:"Tick of CS2 start: -1 for none"`
-	CS2End   int     `desc:"Tick of CS2 end: -1 for none"`
-	US       int     `desc:"Unconditioned stimulus"`
-	USStart  int     `desc:"Tick for start of US presentation"`
-	USEnd    int     `desc:"Tick for end of US presentation"`
-	Context  string  `desc:"Context -- typically same as CS -- if blank CS will be copied -- different in certain extinguishing contexts"`
 
-	// The following are set for generated trials:
+	// conventional suffixes: _R = reward, _NR = non-reward; _test = test trial (no learning)
+	Name string `desc:"conventional suffixes: _R = reward, _NR = non-reward; _test = test trial (no learning)"`
+
+	// true if testing only -- no learning
+	Test bool `desc:"true if testing only -- no learning"`
+
+	// Percent of all trials for this type
+	Pct float32 `desc:"Percent of all trials for this type"`
+
+	// Positive or negative reward valence
+	Valence Valence `desc:"Positive or negative reward valence"`
+
+	// Probability of US
+	USProb float32 `desc:"Probability of US"`
+
+	// Mixed US set?
+	MixedUS bool `desc:"Mixed US set?"`
+
+	// US magnitude
+	USMag float32 `desc:"US magnitude"`
+
+	// Number of ticks for a trial
+	NTicks int `desc:"Number of ticks for a trial"`
+
+	// Conditioned stimulus
+	CS string `desc:"Conditioned stimulus"`
+
+	// Tick of CS start
+	CSStart int `desc:"Tick of CS start"`
+
+	// Tick of CS end
+	CSEnd int `desc:"Tick of CS end"`
+
+	// Tick of CS2 start: -1 for none
+	CS2Start int `desc:"Tick of CS2 start: -1 for none"`
+
+	// Tick of CS2 end: -1 for none
+	CS2End int `desc:"Tick of CS2 end: -1 for none"`
+
+	// Unconditioned stimulus
+	US int `desc:"Unconditioned stimulus"`
+
+	// Tick for start of US presentation
+	USStart int `desc:"Tick for start of US presentation"`
+
+	// Tick for end of US presentation
+	USEnd int `desc:"Tick for end of US presentation"`
+
+	// Context -- typically same as CS -- if blank CS will be copied -- different in certain extinguishing contexts
+	Context string `desc:"Context -- typically same as CS -- if blank CS will be copied -- different in certain extinguishing contexts"`
+
+	// for rendered trials, true if US active
 	USOn bool `desc:"for rendered trials, true if US active"`
+
+	// for rendered trials, true if CS active
 	CSOn bool `desc:"for rendered trials, true if CS active"`
 }
 

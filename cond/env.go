@@ -24,24 +24,59 @@ import (
 // * Trial = one behavioral trial consisting of CS -> US presentation over time steps (Ticks)
 // * Tick = discrete time steps within behavioral Trial, typically one Network update (Alpha / Theta cycle)
 type CondEnv struct {
-	Nm          string  `desc:"name of this environment"`
-	Dsc         string  `desc:"description of this environment"`
-	NYReps      int     `desc:"number of Y repetitions for localist reps"`
-	RunName     string  `desc:"current run name"`
-	RunDesc     string  `desc:"description of current run"`
-	CondDesc    string  `desc:"description of current condition"`
-	Run         env.Ctr `inactive:"+" view:"inline" desc:"counter over runs"`
-	Condition   env.Ctr `inactive:"+" view:"inline" desc:"counter over Condition within a run -- Max depends on number of conditions specified in given Run"`
-	Block       env.Ctr `inactive:"+" view:"inline" desc:"counter over full blocks of all trial types within a Condition -- like an Epoch"`
-	Trial       env.Ctr `inactive:"+" view:"inline" desc:"counter of behavioral trials within a Block"`
-	Tick        env.Ctr `inactive:"+" view:"inline" desc:"counter of discrete steps within a behavioral trial -- typically maps onto Alpha / Theta cycle in network"`
-	TrialName   string  `inactive:"+" desc:"name of current trial step"`
-	TrialType   string  `inactive:"+" desc:"type of current trial step"`
-	USTimeInStr string  `inactive:"+" desc:"decoded value of USTimeIn"`
 
-	Trials    []*Trial                    `desc:"current generated set of trials per Block"`
-	CurRun    Run                         `desc:"copy of current run parameters"`
-	CurTrial  Trial                       `desc:"copy of info for current trial"`
+	// name of this environment
+	Nm string `desc:"name of this environment"`
+
+	// description of this environment
+	Dsc string `desc:"description of this environment"`
+
+	// number of Y repetitions for localist reps
+	NYReps int `desc:"number of Y repetitions for localist reps"`
+
+	// current run name
+	RunName string `desc:"current run name"`
+
+	// description of current run
+	RunDesc string `desc:"description of current run"`
+
+	// description of current condition
+	CondDesc string `desc:"description of current condition"`
+
+	// [view: inline] counter over runs
+	Run env.Ctr `inactive:"+" view:"inline" desc:"counter over runs"`
+
+	// [view: inline] counter over Condition within a run -- Max depends on number of conditions specified in given Run
+	Condition env.Ctr `inactive:"+" view:"inline" desc:"counter over Condition within a run -- Max depends on number of conditions specified in given Run"`
+
+	// [view: inline] counter over full blocks of all trial types within a Condition -- like an Epoch
+	Block env.Ctr `inactive:"+" view:"inline" desc:"counter over full blocks of all trial types within a Condition -- like an Epoch"`
+
+	// [view: inline] counter of behavioral trials within a Block
+	Trial env.Ctr `inactive:"+" view:"inline" desc:"counter of behavioral trials within a Block"`
+
+	// [view: inline] counter of discrete steps within a behavioral trial -- typically maps onto Alpha / Theta cycle in network
+	Tick env.Ctr `inactive:"+" view:"inline" desc:"counter of discrete steps within a behavioral trial -- typically maps onto Alpha / Theta cycle in network"`
+
+	// name of current trial step
+	TrialName string `inactive:"+" desc:"name of current trial step"`
+
+	// type of current trial step
+	TrialType string `inactive:"+" desc:"type of current trial step"`
+
+	// decoded value of USTimeIn
+	USTimeInStr string `inactive:"+" desc:"decoded value of USTimeIn"`
+
+	// current generated set of trials per Block
+	Trials []*Trial `desc:"current generated set of trials per Block"`
+
+	// copy of current run parameters
+	CurRun Run `desc:"copy of current run parameters"`
+
+	// copy of info for current trial
+	CurTrial Trial `desc:"copy of info for current trial"`
+
+	// current rendered state tensors -- extensible map
 	CurStates map[string]*etensor.Float32 `desc:"current rendered state tensors -- extensible map"`
 }
 

@@ -32,11 +32,21 @@ const LogPrec = 4
 
 // Sim holds the params, table, etc
 type Sim struct {
-	Env       Approach    `desc:"the env item"`
-	Grids     *gi.Layout  `view:"-" desc:"the grids"`
-	GridNames []string    `view:"-" desc:"state names for each grid"`
-	Win       *gi.Window  `view:"-" desc:"main GUI window"`
-	ToolBar   *gi.ToolBar `view:"-" desc:"the master toolbar"`
+
+	// the env item
+	Env Approach `desc:"the env item"`
+
+	// [view: -] the grids
+	Grids *gi.Layout `view:"-" desc:"the grids"`
+
+	// [view: -] state names for each grid
+	GridNames []string `view:"-" desc:"state names for each grid"`
+
+	// [view: -] main GUI window
+	Win *gi.Window `view:"-" desc:"main GUI window"`
+
+	// [view: -] the master toolbar
+	ToolBar *gi.ToolBar `view:"-" desc:"the master toolbar"`
 }
 
 // TheSim is the overall state for this simulation

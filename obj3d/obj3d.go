@@ -19,16 +19,36 @@ import (
 // Obj3D implements management of lists of 3D objects, organized in directories
 // that provide the category names.
 type Obj3D struct {
-	Path          string        `desc:"path to object files -- this should point to a directory that has subdirectories that then have .obj files in them"`
-	NTestPerCat   int           `desc:"number of testing items per category"`
-	Cats          []string      `desc:"list of object categories (directory name)"`
-	ObjFilesAll   [][]string    `desc:"full list of objects, organized by category (directory) and then filename"`
-	ObjFilesTrain [][]string    `desc:"list of training objects, organized by category (directory) and then filename"`
-	ObjFilesTest  [][]string    `desc:"list of testing objects, organized by category (directory) and then filename"`
-	ObjCatProps   *etable.Table `desc:"properties for each object category, used for rendering: z_offset is extra offset to add to z-dimension (depth), for objects that are larger than others in total size, despite normalizing along individual axes.  y_rot_mirror is 1 (true) if the object has rough mirror symmetry when rotated around the Y (vertical) axis 180 deg."`
-	FlatAll       []string      `desc:"flat list of all objects, as cat/filename.obj -- Flats() makes from above"`
-	FlatTrain     []string      `desc:"flat list of all training objects, as cat/filename.obj -- Flats() makes from above"`
-	FlatTest      []string      `desc:"flat list of all testing objects, as cat/filename.obj -- Flats() makes from above"`
+
+	// path to object files -- this should point to a directory that has subdirectories that then have .obj files in them
+	Path string `desc:"path to object files -- this should point to a directory that has subdirectories that then have .obj files in them"`
+
+	// number of testing items per category
+	NTestPerCat int `desc:"number of testing items per category"`
+
+	// list of object categories (directory name)
+	Cats []string `desc:"list of object categories (directory name)"`
+
+	// full list of objects, organized by category (directory) and then filename
+	ObjFilesAll [][]string `desc:"full list of objects, organized by category (directory) and then filename"`
+
+	// list of training objects, organized by category (directory) and then filename
+	ObjFilesTrain [][]string `desc:"list of training objects, organized by category (directory) and then filename"`
+
+	// list of testing objects, organized by category (directory) and then filename
+	ObjFilesTest [][]string `desc:"list of testing objects, organized by category (directory) and then filename"`
+
+	// properties for each object category, used for rendering: z_offset is extra offset to add to z-dimension (depth), for objects that are larger than others in total size, despite normalizing along individual axes.  y_rot_mirror is 1 (true) if the object has rough mirror symmetry when rotated around the Y (vertical) axis 180 deg.
+	ObjCatProps *etable.Table `desc:"properties for each object category, used for rendering: z_offset is extra offset to add to z-dimension (depth), for objects that are larger than others in total size, despite normalizing along individual axes.  y_rot_mirror is 1 (true) if the object has rough mirror symmetry when rotated around the Y (vertical) axis 180 deg."`
+
+	// flat list of all objects, as cat/filename.obj -- Flats() makes from above
+	FlatAll []string `desc:"flat list of all objects, as cat/filename.obj -- Flats() makes from above"`
+
+	// flat list of all training objects, as cat/filename.obj -- Flats() makes from above
+	FlatTrain []string `desc:"flat list of all training objects, as cat/filename.obj -- Flats() makes from above"`
+
+	// flat list of all testing objects, as cat/filename.obj -- Flats() makes from above
+	FlatTest []string `desc:"flat list of all testing objects, as cat/filename.obj -- Flats() makes from above"`
 }
 
 // OpenPath opens list of objs at given path

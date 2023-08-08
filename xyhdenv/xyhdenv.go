@@ -27,51 +27,135 @@ import (
 
 // XYHDEnv is a flat-world grid-based environment with XY position and Head Direction, adapted from fworld
 type XYHDEnv struct {
-	Nm          string                      `desc:"name of this environment"`
-	Dsc         string                      `desc:"description of this environment"`
-	Disp        bool                        `desc:"update display -- turn off to make it faster"`
-	Size        evec.Vec2i                  `desc:"size of 2D world"`
-	PatSize     evec.Vec2i                  `desc:"size of patterns for mats, acts"`
-	PosSize     evec.Vec2i                  `desc:"size of patterns for xy coordinates"`
-	World       *etensor.Int                `view:"no-inline" desc:"2D grid world, each cell is a material (mat)"`
-	Mats        []string                    `desc:"list of materials in the world, 0 = empty.  Any superpositions of states need to be discretely encoded, can be transformed through action rules"`
-	MatMap      map[string]int              `desc:"map of material name to index stored in world cell"`
-	BarrierIdx  int                         `desc:"index of material below which (inclusive) cannot move -- e.g., 1 for wall"`
-	Pats        map[string]*etensor.Float32 `desc:"patterns for each material (must include Empty) and for each action"`
-	Acts        []string                    `desc:"list of actions: starts with: Left, Right, Forward"`
-	ActMap      map[string]int              `desc:"action map of action names to indexes"`
-	Params      map[string]float32          `desc:"map of optional interoceptive and world-dynamic parameters -- cleaner to store in a map"`
-	AngInc      int                         `desc:"angle increment for rotation, in degrees -- defaults to 90"`
-	NRotAngles  int                         `inactive:"+" desc:"total number of rotation angles in a circle"`
-	TraceActGen bool                        `desc:"for debugging, print out a trace of the action generation logic"`
-	RingSize    int                         `inactive:"+" desc:"number of units in ring population codes"`
-	VesSize     int                         `inactive:"+" desc:"number of units in population codes"`
-	PopCode     popcode.OneD                `desc:"population code values, in normalized units"`
-	PopCode2d   popcode.TwoD                `desc:"2d population code values, in normalized units"`
-	AngCode     popcode.Ring                `desc:"angle population code values, in normalized units"`
 
-	// current state below (params above)
-	PrevPosF      mat32.Vec2                  `inactive:"+" desc:"current location of agent, floating point"`
-	PrevPosI      evec.Vec2i                  `inactive:"+" desc:"current location of agent, integer"`
-	PosF          mat32.Vec2                  `inactive:"+" desc:"current location of agent, floating point"`
-	PosI          evec.Vec2i                  `inactive:"+" desc:"current location of agent, integer"`
-	PrevAngle     int                         `inactive:"+" desc:"current angle, in degrees"`
-	Angle         int                         `inactive:"+" desc:"current angle, in degrees"`
-	RotAng        int                         `inactive:"+" desc:"angle that we just rotated -- drives vestibular"`
-	Act           int                         `inactive:"+" desc:"last action taken"`
-	ProxMats      []int                       `desc:"material at each right angle: front, right, left, back"`
-	ProxPos       []evec.Vec2i                `desc:"coordinates for proximal grid points: front, right, left, back"`
-	CurStates     map[string]*etensor.Float32 `desc:"current rendered state tensors -- extensible map"`
-	NextStates    map[string]*etensor.Float32 `desc:"next rendered state tensors -- updated from actions"`
-	RefreshEvents map[int]*WEvent             `desc:"list of events, key is tick step, to check each step to drive refresh of consumables -- removed from this active list when complete"`
-	AllEvents     map[int]*WEvent             `desc:"list of all events, key is tick step"`
-	Run           env.Ctr                     `view:"inline" desc:"current run of model as provided during Init"`
-	Epoch         env.Ctr                     `view:"inline" desc:"increments over arbitrary fixed number of trials, for general stats-tracking"`
-	Trial         env.Ctr                     `view:"inline" desc:"increments for each step of world, loops over epochs -- for general stats-tracking independent of env state"`
-	Tick          env.Ctr                     `view:"monolithic time counter -- counts up time every step -- used for refreshing world state"`
-	Event         env.Ctr                     `view:"arbitrary counter for steps within a scene -- resets at consumption event"`
-	Scene         env.Ctr                     `view:"arbitrary counter incrementing over a coherent sequence of events: e.g., approaching food -- increments at consumption"`
-	Episode       env.Ctr                     `view:"arbitrary counter incrementing over scenes within larger episode: feeding, drinking, exploring, etc"`
+	// name of this environment
+	Nm string `desc:"name of this environment"`
+
+	// description of this environment
+	Dsc string `desc:"description of this environment"`
+
+	// update display -- turn off to make it faster
+	Disp bool `desc:"update display -- turn off to make it faster"`
+
+	// size of 2D world
+	Size evec.Vec2i `desc:"size of 2D world"`
+
+	// size of patterns for mats, acts
+	PatSize evec.Vec2i `desc:"size of patterns for mats, acts"`
+
+	// size of patterns for xy coordinates
+	PosSize evec.Vec2i `desc:"size of patterns for xy coordinates"`
+
+	// [view: no-inline] 2D grid world, each cell is a material (mat)
+	World *etensor.Int `view:"no-inline" desc:"2D grid world, each cell is a material (mat)"`
+
+	// list of materials in the world, 0 = empty.  Any superpositions of states need to be discretely encoded, can be transformed through action rules
+	Mats []string `desc:"list of materials in the world, 0 = empty.  Any superpositions of states need to be discretely encoded, can be transformed through action rules"`
+
+	// map of material name to index stored in world cell
+	MatMap map[string]int `desc:"map of material name to index stored in world cell"`
+
+	// index of material below which (inclusive) cannot move -- e.g., 1 for wall
+	BarrierIdx int `desc:"index of material below which (inclusive) cannot move -- e.g., 1 for wall"`
+
+	// patterns for each material (must include Empty) and for each action
+	Pats map[string]*etensor.Float32 `desc:"patterns for each material (must include Empty) and for each action"`
+
+	// list of actions: starts with: Left, Right, Forward
+	Acts []string `desc:"list of actions: starts with: Left, Right, Forward"`
+
+	// action map of action names to indexes
+	ActMap map[string]int `desc:"action map of action names to indexes"`
+
+	// map of optional interoceptive and world-dynamic parameters -- cleaner to store in a map
+	Params map[string]float32 `desc:"map of optional interoceptive and world-dynamic parameters -- cleaner to store in a map"`
+
+	// angle increment for rotation, in degrees -- defaults to 90
+	AngInc int `desc:"angle increment for rotation, in degrees -- defaults to 90"`
+
+	// total number of rotation angles in a circle
+	NRotAngles int `inactive:"+" desc:"total number of rotation angles in a circle"`
+
+	// for debugging, print out a trace of the action generation logic
+	TraceActGen bool `desc:"for debugging, print out a trace of the action generation logic"`
+
+	// number of units in ring population codes
+	RingSize int `inactive:"+" desc:"number of units in ring population codes"`
+
+	// number of units in population codes
+	VesSize int `inactive:"+" desc:"number of units in population codes"`
+
+	// population code values, in normalized units
+	PopCode popcode.OneD `desc:"population code values, in normalized units"`
+
+	// 2d population code values, in normalized units
+	PopCode2d popcode.TwoD `desc:"2d population code values, in normalized units"`
+
+	// angle population code values, in normalized units
+	AngCode popcode.Ring `desc:"angle population code values, in normalized units"`
+
+	// current location of agent, floating point
+	PrevPosF mat32.Vec2 `inactive:"+" desc:"current location of agent, floating point"`
+
+	// current location of agent, integer
+	PrevPosI evec.Vec2i `inactive:"+" desc:"current location of agent, integer"`
+
+	// current location of agent, floating point
+	PosF mat32.Vec2 `inactive:"+" desc:"current location of agent, floating point"`
+
+	// current location of agent, integer
+	PosI evec.Vec2i `inactive:"+" desc:"current location of agent, integer"`
+
+	// current angle, in degrees
+	PrevAngle int `inactive:"+" desc:"current angle, in degrees"`
+
+	// current angle, in degrees
+	Angle int `inactive:"+" desc:"current angle, in degrees"`
+
+	// angle that we just rotated -- drives vestibular
+	RotAng int `inactive:"+" desc:"angle that we just rotated -- drives vestibular"`
+
+	// last action taken
+	Act int `inactive:"+" desc:"last action taken"`
+
+	// material at each right angle: front, right, left, back
+	ProxMats []int `desc:"material at each right angle: front, right, left, back"`
+
+	// coordinates for proximal grid points: front, right, left, back
+	ProxPos []evec.Vec2i `desc:"coordinates for proximal grid points: front, right, left, back"`
+
+	// current rendered state tensors -- extensible map
+	CurStates map[string]*etensor.Float32 `desc:"current rendered state tensors -- extensible map"`
+
+	// next rendered state tensors -- updated from actions
+	NextStates map[string]*etensor.Float32 `desc:"next rendered state tensors -- updated from actions"`
+
+	// list of events, key is tick step, to check each step to drive refresh of consumables -- removed from this active list when complete
+	RefreshEvents map[int]*WEvent `desc:"list of events, key is tick step, to check each step to drive refresh of consumables -- removed from this active list when complete"`
+
+	// list of all events, key is tick step
+	AllEvents map[int]*WEvent `desc:"list of all events, key is tick step"`
+
+	// [view: inline] current run of model as provided during Init
+	Run env.Ctr `view:"inline" desc:"current run of model as provided during Init"`
+
+	// [view: inline] increments over arbitrary fixed number of trials, for general stats-tracking
+	Epoch env.Ctr `view:"inline" desc:"increments over arbitrary fixed number of trials, for general stats-tracking"`
+
+	// [view: inline] increments for each step of world, loops over epochs -- for general stats-tracking independent of env state
+	Trial env.Ctr `view:"inline" desc:"increments for each step of world, loops over epochs -- for general stats-tracking independent of env state"`
+
+	// [view: monolithic time counter -- counts up time every step -- used for refreshing world state]
+	Tick env.Ctr `view:"monolithic time counter -- counts up time every step -- used for refreshing world state"`
+
+	// [view: arbitrary counter for steps within a scene -- resets at consumption event]
+	Event env.Ctr `view:"arbitrary counter for steps within a scene -- resets at consumption event"`
+
+	// [view: arbitrary counter incrementing over a coherent sequence of events: e.g., approaching food -- increments at consumption]
+	Scene env.Ctr `view:"arbitrary counter incrementing over a coherent sequence of events: e.g., approaching food -- increments at consumption"`
+
+	// [view: arbitrary counter incrementing over scenes within larger episode: feeding, drinking, exploring, etc]
+	Episode env.Ctr `view:"arbitrary counter incrementing over scenes within larger episode: feeding, drinking, exploring, etc"`
 }
 
 var KiT_XYHDEnv = kit.Types.AddType(&XYHDEnv{}, XYHDEnvProps)
@@ -395,12 +479,26 @@ func (ev *XYHDEnv) ScanProx() {
 
 // WEvent records an event
 type WEvent struct {
-	Tick   int        `desc:"tick when event happened"`
-	PosI   evec.Vec2i `desc:"discrete integer grid position where event happened"`
-	PosF   mat32.Vec2 `desc:"floating point grid position where event happened"`
-	Angle  int        `desc:"angle pointing when event happened"`
-	Act    int        `desc:"action that took place"`
-	Mat    int        `desc:"material that was involved (front fovea mat)"`
+
+	// tick when event happened
+	Tick int `desc:"tick when event happened"`
+
+	// discrete integer grid position where event happened
+	PosI evec.Vec2i `desc:"discrete integer grid position where event happened"`
+
+	// floating point grid position where event happened
+	PosF mat32.Vec2 `desc:"floating point grid position where event happened"`
+
+	// angle pointing when event happened
+	Angle int `desc:"angle pointing when event happened"`
+
+	// action that took place
+	Act int `desc:"action that took place"`
+
+	// material that was involved (front fovea mat)
+	Mat int `desc:"material that was involved (front fovea mat)"`
+
+	// position of material involved in event
 	MatPos evec.Vec2i `desc:"position of material involved in event"`
 }
 
