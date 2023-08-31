@@ -1165,7 +1165,47 @@ var AllBlocks = map[string]Block{
 			Context:  "AC",
 		},
 	},
-	"NegAcq": {
+	"NegAcq_D100": {
+		{
+			Name:     "D_R",
+			Pct:      1,
+			Valence:  Neg,
+			USProb:   1,
+			MixedUS:  false,
+			USMag:    1,
+			NTicks:   5,
+			CS:       "D",
+			CSStart:  1,
+			CSEnd:    3,
+			CS2Start: -1,
+			CS2End:   -1,
+			US:       0,
+			USStart:  3,
+			USEnd:    3,
+			Context:  "D",
+		},
+	},
+	"NegExt_D100": {
+		{
+			Name:     "D_NR",
+			Pct:      1,
+			Valence:  Neg,
+			USProb:   0,
+			MixedUS:  false,
+			USMag:    1,
+			NTicks:   5,
+			CS:       "D",
+			CSStart:  1,
+			CSEnd:    3,
+			CS2Start: -1,
+			CS2End:   -1,
+			US:       0,
+			USStart:  3,
+			USEnd:    3,
+			Context:  "D",
+		},
+	},
+	"NegAcq_D100E25": {
 		{
 			Name:     "D_R",
 			Pct:      0.5,
@@ -1203,7 +1243,7 @@ var AllBlocks = map[string]Block{
 			Context:  "E",
 		},
 	},
-	"NegExtinct": {
+	"NegExt_D100E25": {
 		{
 			Name:     "D_NR",
 			Pct:      0.5,

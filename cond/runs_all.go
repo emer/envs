@@ -91,10 +91,15 @@ var AllRuns = map[string]*Run{
 		Desc:  "",
 		Cond1: "PosAcq_A100B25",
 	},
-	"NegAcq": {
-		Name:  "NegAcq",
+	"NegAcq_D100": {
+		Name:  "NegAcq_D100",
 		Desc:  "",
-		Cond1: "NegAcq",
+		Cond1: "NegAcq_D100",
+	},
+	"NegAcq_D100E25": {
+		Name:  "NegAcq_D100E25",
+		Desc:  "",
+		Cond1: "NegAcq_D100E25",
 	},
 	"NegAcqMag": {
 		Name:  "NegAcqMag",
@@ -106,11 +111,27 @@ var AllRuns = map[string]*Run{
 		Desc:  "",
 		Cond1: "PosAcqMag",
 	},
-	"NegAcqExt": {
-		Name:  "NegAcqExt",
+	"NegAcqExt_D100": {
+		Name:  "NegAcqExt_D100",
 		Desc:  "",
-		Cond1: "NegAcq",
-		Cond2: "NegExtinct",
+		Cond1: "NegAcq_D100",
+		Cond2: "NegExt_D100",
+	},
+	"NegExt_D100": {
+		Name:  "NegExt_D100",
+		Desc:  "",
+		Cond1: "NegExt_D100",
+	},
+	"NegAcqExt_D100E25": {
+		Name:  "NegAcqExt_D100E25",
+		Desc:  "",
+		Cond1: "NegAcq_D100E25",
+		Cond2: "NegExt_D100E25",
+	},
+	"NegExt_D100E25": {
+		Name:  "NegExt_D100E25",
+		Desc:  "",
+		Cond1: "NegExt_D100E25",
 	},
 	"PosCondInhib": {
 		Name:  "PosCondInhib",
@@ -142,7 +163,7 @@ var AllRuns = map[string]*Run{
 	"NegCondInhib": {
 		Name:  "NegCondInhib",
 		Desc:  "",
-		Cond1: "NegAcq",
+		Cond1: "NegAcq_D100E25",
 		Cond2: "NegCondInh",
 		Cond3: "NegCondInh_test",
 	},
