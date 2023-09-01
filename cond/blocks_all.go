@@ -1185,7 +1185,7 @@ var AllBlocks = map[string]Block{
 			Context:  "D",
 		},
 	},
-	"NegExt_D100": {
+	"NegExt_D0": {
 		{
 			Name:     "D_NR",
 			Pct:      1,
@@ -1243,7 +1243,7 @@ var AllBlocks = map[string]Block{
 			Context:  "E",
 		},
 	},
-	"NegExt_D100E25": {
+	"NegExt_D0E0": {
 		{
 			Name:     "D_NR",
 			Pct:      0.5,

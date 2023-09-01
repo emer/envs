@@ -115,23 +115,29 @@ var AllRuns = map[string]*Run{
 		Name:  "NegAcqExt_D100",
 		Desc:  "",
 		Cond1: "NegAcq_D100",
-		Cond2: "NegExt_D100",
+		Cond2: "NegExt_D0",
 	},
-	"NegExt_D100": {
-		Name:  "NegExt_D100",
+	"NegExt_D0": {
+		Name:  "NegExt_D0",
 		Desc:  "",
-		Cond1: "NegExt_D100",
+		Cond1: "NegExt_D0",
+	},
+	"NegExt_D100Wts": {
+		Name:    "NegAcq_D100Wts",
+		Desc:    "Load weights of negative acquisition D 100%, go directly to extinguish -- must save weights from NegAcq_D100 first",
+		Weights: "NegAcq_D100",
+		Cond1:   "NegExt_D0",
 	},
 	"NegAcqExt_D100E25": {
 		Name:  "NegAcqExt_D100E25",
 		Desc:  "",
 		Cond1: "NegAcq_D100E25",
-		Cond2: "NegExt_D100E25",
+		Cond2: "NegExt_D0E0",
 	},
-	"NegExt_D100E25": {
-		Name:  "NegExt_D100E25",
+	"NegExt_D0E0": {
+		Name:  "NegExt_D0E0",
 		Desc:  "",
-		Cond1: "NegExt_D100E25",
+		Cond1: "NegExt_D0E0",
 	},
 	"PosCondInhib": {
 		Name:  "PosCondInhib",
