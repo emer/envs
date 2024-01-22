@@ -46,13 +46,13 @@ type ImagesEnv struct {
 	TransMax mat32.Vec2 `desc:"def 0.3 maximum amount of translation as proportion of half-width size in each direction -- 1 = something in center is now at right edge"`
 
 	// [def: 0.15] if > 0, generate translations using gaussian normal distribution with this standard deviation, and then clip to TransMax range -- this facilitates learning on the central region while still giving exposure to wider area.  Tyically turn off for last 100 epochs to measure true uniform distribution performance.
-	TransSigma float32 `def:"0.15" desc:"if > 0, generate translations using gaussian normal distribution with this standard deviation, and then clip to TransMax range -- this facilitates learning on the central region while still giving exposure to wider area.  Tyically turn off for last 100 epochs to measure true uniform distribution performance."`
+	TransSigma float32 `default:"0.15" desc:"if > 0, generate translations using gaussian normal distribution with this standard deviation, and then clip to TransMax range -- this facilitates learning on the central region while still giving exposure to wider area.  Tyically turn off for last 100 epochs to measure true uniform distribution performance."`
 
 	// def 0.5 - 1.1 range of scale
 	ScaleRange minmax.F32 `desc:"def 0.5 - 1.1 range of scale"`
 
 	// [def: 8] def 8 maximum degrees of rotation in plane -- image is rotated plus or minus in this range
-	RotateMax float32 `def:"8" desc:"def 8 maximum degrees of rotation in plane -- image is rotated plus or minus in this range"`
+	RotateMax float32 `default:"8" desc:"def 8 maximum degrees of rotation in plane -- image is rotated plus or minus in this range"`
 
 	// v1 16deg medium resolution filtering of image -- V1AllTsr has result
 	V1m16 Vis `desc:"v1 16deg medium resolution filtering of image -- V1AllTsr has result"`

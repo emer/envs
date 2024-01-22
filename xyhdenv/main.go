@@ -27,7 +27,7 @@ func main() {
 
 func guirun() {
 	TheSim.Config() // important to have this after gui init
-	win := TheSim.ConfigGui()
+	win := TheSim.ConfigGUI()
 	win.StartEventLoop()
 }
 
@@ -217,8 +217,8 @@ func (ss *Sim) ConfigWorldView(tg *etview.TensorGrid) {
 	tg.SetStretchMax()
 }
 
-// ConfigGui configures the GoGi gui interface for this simulation,
-func (ss *Sim) ConfigGui() *gi.Window {
+// ConfigGUI configures the Cogent Core gui interface for this simulation,
+func (ss *Sim) ConfigGUI() *gi.Window {
 	width := 1600
 	height := 1200
 

@@ -26,7 +26,7 @@ func main() {
 }
 
 func guirun() {
-	win := TheSim.ConfigGui()
+	win := TheSim.ConfigGUI()
 	win.StartEventLoop()
 }
 
@@ -88,8 +88,8 @@ func (ss *Sim) Step() {
 	ss.Table.SetCellString("TrialName", 0, ss.Corpus.String())
 }
 
-// ConfigGui configures the GoGi gui interface for this simulation,
-func (ss *Sim) ConfigGui() *gi.Window {
+// ConfigGUI configures the Cogent Core gui interface for this simulation,
+func (ss *Sim) ConfigGUI() *gi.Window {
 	width := 1600
 	height := 1200
 

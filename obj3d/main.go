@@ -26,7 +26,7 @@ func main() {
 }
 
 func guirun() {
-	win := TheSim.ConfigGui()
+	win := TheSim.ConfigGUI()
 	win.StartEventLoop()
 }
 
@@ -61,8 +61,8 @@ func (ss *Sim) Config() {
 	ss.Objs.OpenCatProps("cu3d_obj_cat_props.csv")
 }
 
-// ConfigGui configures the GoGi gui interface for this simulation,
-func (ss *Sim) ConfigGui() *gi.Window {
+// ConfigGUI configures the Cogent Core gui interface for this simulation,
+func (ss *Sim) ConfigGUI() *gi.Window {
 	width := 1600
 	height := 1200
 
